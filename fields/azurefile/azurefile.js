@@ -6,58 +6,61 @@ var _ = require('underscore'),
 	moment = require('moment'),
 	keystone = require('../../'),
 	async = require('async'),
-	util = require('util'),
 	azure = require('azure'),
 	utils = require('keystone-utils'),
-	super_ = require('../field');
+	Field = keystone.Field;
 
 
-/**
- * AzureFile FieldType Constructor
- * @extends Field
- * @api public
- */
+module.exports = AzureFile = Field.extend({
 
-function azurefile(list, path, options) {
+	/**
+	 * AzureFile FieldType Constructor
+	 * @extends Field
+	 * @api public
+	 */
+	constructor: function(list, path, options) {
+		this._underscoreMethods = ['format', 'uploadFile'];
 
-	this._underscoreMethods = ['format', 'uploadFile'];
+		// event queues
+		this._pre = {
+			upload: []
+		};
 
-	// event queues
-	this._pre = {
-		upload: []
-	};
+		// TODO: implement filtering, usage disabled for now
+		options.nofilter = true;
 
-	// TODO: implement filtering, usage disabled for now
-	options.nofilter = true;
+		// TODO: implement initial form, usage disabled for now
+		if (options.initial) {
+			throw new Error('Invalid Configuration\n\nAzureFile fields (' + list.key + '.' + path + ') do not currently support being used as initial fields.\n');
+		}
 
-	// TODO: implement initial form, usage disabled for now
-	if (options.initial) {
-		throw new Error('Invalid Configuration\n\nAzureFile fields (' + list.key + '.' + path + ') do not currently support being used as initial fields.\n');
+		Field.apply(this, arguments);
+
+		// validate azurefile config (has to happen after super_.call)
+		if (!this.azurefileconfig) {
+			throw new Error('Invalid Configuration\n\n' +
+				'AzureFile fields (' + list.key + '.' + path + ') require the "azurefile config" option to be set.\n\n' +
+				'See http://keystonejs.com/docs/configuration#services-azure for more information.\n');
+		}
+
+		process.env.AZURE_STORAGE_ACCOUNT = this.azurefileconfig.account;
+		process.env.AZURE_STORAGE_ACCESS_KEY = this.azurefileconfig.key;
+
+		this.azurefileconfig.container = this.azurefileconfig.container || 'keystone';
+
+		options.filenameFormatter = options.filenameFormatter || function(item, filename) { return filename; };
+		options.containerFormatter = options.containerFormatter || function(item, filename) { return self.azurefileconfig.container; };
+
+		// Could be more pre- hooks, just upload for now
+		if (options.pre && options.pre.upload) {
+			this._pre.upload = this._pre.upload.concat(options.pre.upload);
+		}
 	}
+});
 
-	azurefile.super_.call(this, list, path, options);
 
-	// validate azurefile config (has to happen after super_.call)
-	if (!this.azurefileconfig) {
-		throw new Error('Invalid Configuration\n\n' +
-			'AzureFile fields (' + list.key + '.' + path + ') require the "azurefile config" option to be set.\n\n' +
-			'See http://keystonejs.com/docs/configuration#services-azure for more information.\n');
-	}
 
-	process.env.AZURE_STORAGE_ACCOUNT = this.azurefileconfig.account;
-	process.env.AZURE_STORAGE_ACCESS_KEY = this.azurefileconfig.key;
 
-	this.azurefileconfig.container = this.azurefileconfig.container || 'keystone';
-
-	options.filenameFormatter = options.filenameFormatter || function(item, filename) { return filename; };
-	options.containerFormatter = options.containerFormatter || function(item, filename) { return self.azurefileconfig.container; };
-
-	// Could be more pre- hooks, just upload for now
-	if (options.pre && options.pre.upload) {
-		this._pre.upload = this._pre.upload.concat(options.pre.upload);
-	}
-
-}
 
 /*!
  * Inherit from Field
