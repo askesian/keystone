@@ -3,230 +3,217 @@
  */
 
 var _ = require('underscore'),
-	keystone = require('../../'),
-	util = require('util'),
 	utils = require('keystone-utils'),
-	super_ = require('../field');
+	keystone = require('../../'),
+	Field = keystone.Field;
 
-/**
- * Relationship FieldType Constructor
- * @extends Field
- * @api public
- */
+module.exports = Relationship = Field.extend({
+	/**
+	 * Relationship FieldType Constructor
+	 * @extends Field
+	 * @api public
+	 */
+	constructor: function(list, path, options) {
+		this.many = (options.many) ? true : false;
+		this.filters = options.filters;
+		this._nativeType = keystone.mongoose.Schema.Types.ObjectId;
+		this._underscoreMethods = ['format'];
 
-function relationship(list, path, options) {
+		Field.apply(this, arguments);
+	},
 
-	this.many = (options.many) ? true : false;
-	this.filters = options.filters;
-	this._nativeType = keystone.mongoose.Schema.Types.ObjectId;
-	this._underscoreMethods = ['format'];
+	/**
+	 * Registers the field on the List's Mongoose Schema.
+	 *
+	 * @api public
+	 */
+	addToSchema: function() {
+		var field = this,
+			schema = this.list.schema;
 
-	relationship.super_.call(this, list, path, options);
+		this.paths = {
+			refList: this.options.refListPath || this._path.append('RefList')
+		};
 
-}
+		var def = {
+			type: this._nativeType,
+			ref: this.options.ref
+		};
 
-/*!
- * Inherit from Field
- */
+		schema.path(this.path, this.many ? [def] : def);
 
-util.inherits(relationship, super_);
+		schema.virtual(this.paths.refList).get(function() {
+			return this.keystone.list(field.options.ref);
+		});
 
-
-/**
- * Registers the field on the List's Mongoose Schema.
- *
- * @api public
- */
-
-relationship.prototype.addToSchema = function() {
-
-	var field = this,
-		schema = this.list.schema;
-
-	this.paths = {
-		refList: this.options.refListPath || this._path.append('RefList')
-	};
-
-	var def = {
-		type: this._nativeType,
-		ref: this.options.ref
-	};
-
-	schema.path(this.path, this.many ? [def] : def);
-
-	schema.virtual(this.paths.refList).get(function () {
-		return keystone.list(field.options.ref);
-	});
-
-	if (this.many) {
-		this.underscoreMethod('contains', function(find) {
-			var value = this.populated(field.path) || this.get(field.path);
-			if ('object' == typeof find) {
-				find = find.id;
-			}
-			var result = _.some(value, function(value) {
-				return (value + '' == find);
+		if (this.many) {
+			this.underscoreMethod('contains', function(find) {
+				var value = this.populated(field.path) || this.get(field.path);
+				if ('object' === typeof find) {
+					find = find.id;
+				}
+				var result = _.some(value, function(value) {
+					return (value + '' == find);
+				});
+				return result;
 			});
-			return result;
-		});
-	}
-
-	this.bindUnderscoreMethods();
-
-};
-
-/**
- * Formats the field value
- *
- * @api public
- */
-relationship.prototype.format = function(item, format) {
-	var value = item.get(this.path);
-	// force the formatted value to be a - unexpected things happen with ObjectIds.
-	return this.many ? value.join(', ') : (value || '') + '';
-};
-
-
-/**
- * Validates that a value for this field has been provided in a data object
- *
- * @api public
- */
-
-relationship.prototype.validateInput = function(data, required, item) {
-
-	if (!required) return true;
-	if (!(this.path in data) && item && ((this.many && item.get(this.path).length) || item.get(this.path))) return true;
-
-	if ('string' == typeof data[this.path]) {
-		return (data[this.path].trim()) ? true : false;
-	} else {
-		return (data[this.path]) ? true : false;
-	}
-
-};
-
-
-/**
- * Updates the value for this field in the item from a data object.
- * Only updates the value if it has changed.
- * Treats an empty string as a null value.
- *
- * @api public
- */
-
-relationship.prototype.updateItem = function(item, data) {
-
-	if (!(this.path in data)) {
-		return;
-	}
-
-	if (item.populated(this.path)) {
-		throw new Error('fieldTypes.relationship.updateItem() Error - You cannot update populated relationships.');
-	}
-
-	if (this.many) {
-
-		var arr = item.get(this.path),
-			_old = arr.map(function(i) { return String(i); }),
-			_new = data[this.path];
-
-		if (!utils.isArray(_new)) {
-			_new = String(_new || '').split(',');
 		}
 
-		_new = _.compact(_new);
+		this.bindUnderscoreMethods();
+	},
 
-		// remove ids
-		_.difference(_old, _new).forEach(function(val) {
-			arr.pull(val);
-		});
-		// add new ids
-		_.difference(_new, _old).forEach(function(val) {
-			arr.push(val);
-		});
+	/**
+	 * Formats the field value
+	 *
+	 * @api public
+	 */
+	format: function(item, format) {
+		var value = item.get(this.path);
+		// force the formatted value to be a - unexpected things happen with ObjectIds.
+		return this.many ? value.join(', ') : (value || '') + '';
+	},
 
-	} else {
-		if (data[this.path]) {
-			if (data[this.path] != item.get(this.path)) {
-				item.set(this.path, data[this.path]);
+	/**
+	 * Validates that a value for this field has been provided in a data object
+	 *
+	 * @api public
+	 */
+	validateInput: function(data, required, item) {
+		if (!required) return true;
+		if (!(this.path in data) && item && ((this.many && item.get(this.path).length) || item.get(this.path))) return true;
+
+		if ('string' === typeof data[this.path]) {
+			return (data[this.path].trim()) ? true : false;
+		} else {
+			return (data[this.path]) ? true : false;
+		}
+	},
+
+	/**
+	 * Updates the value for this field in the item from a data object.
+	 * Only updates the value if it has changed.
+	 * Treats an empty string as a null value.
+	 *
+	 * @api public
+	 */
+	updateItem: function(item, data) {
+		if (!(this.path in data)) {
+			return;
+		}
+
+		if (item.populated(this.path)) {
+			throw new Error('fieldTypes.relationship.updateItem() Error - You cannot update populated relationships.');
+		}
+
+		if (this.many) {
+
+			var arr = item.get(this.path),
+				_old = arr.map(function(i) {
+					return String(i);
+				}),
+				_new = data[this.path];
+
+			if (!utils.isArray(_new)) {
+				_new = String(_new || '').split(',');
 			}
-		} else if (item.get(this.path)) {
-			item.set(this.path, null);
+
+			_new = _.compact(_new);
+
+			// remove ids
+			_.difference(_old, _new).forEach(function(val) {
+				arr.pull(val);
+			});
+			// add new ids
+			_.difference(_new, _old).forEach(function(val) {
+				arr.push(val);
+			});
+
+		} else {
+			if (data[this.path]) {
+				if (data[this.path] !== item.get(this.path)) {
+					item.set(this.path, data[this.path]);
+				}
+			} else if (item.get(this.path)) {
+				item.set(this.path, null);
+			}
 		}
+
+	},
+
+	/**
+	 * Adds relationship filters to a query
+	 *
+	 * @api public
+	 */
+	addFilters: function(query, item) {
+		_.each(this.filters, function(filters, path) {
+			if (!utils.isObject(filters)) {
+				filters = {
+					equals: filters
+				};
+			}
+			query.where(path);
+			_.each(filters, function(value, method) {
+				if ('string' === typeof value && value.substr(0, 1) == ':') {
+					if (!item) {
+						return;
+					}
+					value = item.get(value.substr(1));
+				}
+				query[method](value);
+			});
+		});
+	},
+
+	getSearchFilters: function (filter, filters) {
+		if (filter.value) {
+			if (filter.field.many) {
+				filters[filter.field.path] = (filter.inv) ? { $nin: [filter.value] } : { $in: [filter.value] };
+			} else {
+				filters[filter.field.path] = (filter.inv) ? { $ne: filter.value } : filter.value;
+			}
+		} else {
+			if (filter.field.many) {
+				filters[filter.field.path] = (filter.inv) ? { $not: { $size: 0 } } : { $size: 0 };
+			} else {
+				filters[filter.field.path] = (filter.inv) ? { $ne: null } : null;
+			}
+		}
+		// TODO: Searching on "not linked to" (null) values seems to return all results.
+		// console.log(filter.field.path + ':');
+		// console.log(filters[filter.field.path]);
 	}
-
-};
-
+});
 
 /**
  * Returns true if the relationship configuration is valid
  *
  * @api public
  */
-
-Object.defineProperty(relationship.prototype, 'isValid', {
+Object.defineProperty(Relationship.prototype, 'isValid', {
 	get: function() {
 		return keystone.list(this.options.ref) ? true : false;
 	}
 });
-
 
 /**
  * Returns the Related List
  *
  * @api public
  */
-
-Object.defineProperty(relationship.prototype, 'refList', {
+Object.defineProperty(Relationship.prototype, 'refList', {
 	get: function() {
 		return keystone.list(this.options.ref);
 	}
 });
-
 
 /**
  * Whether the field has any filters defined
  *
  * @api public
  */
-
-Object.defineProperty(relationship.prototype, 'hasFilters', {
+Object.defineProperty(Relationship.prototype, 'hasFilters', {
 	get: function() {
 		return (this.filters && _.keys(this.filters).length);
 	}
 });
-
-
-/**
- * Adds relationship filters to a query
- *
- * @api public
- */
-
-relationship.prototype.addFilters = function(query, item) {
-
-	_.each(this.filters, function(filters, path) {
-		if (!utils.isObject(filters)) {
-			filters = { equals: filters };
-		}
-		query.where(path);
-		_.each(filters, function(value, method) {
-			if ('string' == typeof value && value.substr(0,1) == ':') {
-				if (!item) {
-					return;
-				}
-				value = item.get(value.substr(1));
-			}
-			query[method](value);
-		});
-	});
-
-};
-
-
-/*!
- * Export class
- */
-
-exports = module.exports = relationship;

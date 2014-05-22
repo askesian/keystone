@@ -3,144 +3,112 @@
  */
 
 var _ = require('underscore'),
-	util = require('util'),
 	bcrypt = require('bcrypt-nodejs'),
 	utils = require('keystone-utils'),
-	super_ = require('../field');
+	keystone = require('../../'),
+	Field = keystone.Field;
 
-/**
- * password FieldType Constructor
- * @extends Field
- * @api public
- */
+module.exports = Field.extend({
+	/**
+	 * password FieldType Constructor
+	 * @extends Field
+	 * @api public
+	 */
+	constructor: function(list, path, options) {
+		this.workFactor = options.workFactor || 10;
+		this._nativeType = String;
+		options.nosort = true; // You can't sort on password fields
+		// TODO: implement filtering, hard-coded as disabled for now
+		options.nofilter = true;
 
-function password(list, path, options) {
-	this.workFactor = options.workFactor || 10;
-	this._nativeType = String;
-	this._underscoreMethods = ['format', 'compare'];
-	options.nosort = true; // You can't sort on password fields
-	// TODO: implement filtering, hard-coded as disabled for now
-	options.nofilter = true;
-	password.super_.call(this, list, path, options);
-}
+		Field.apply(this, arguments);
+	},
 
-/*!
- * Inherit from Field
- */
+	/**
+	 * Registers the field on the List's Mongoose Schema.
+	 *
+	 * Adds ...
+	 *
+	 * @api public
+	 */
+	addToSchema: function() {
 
-util.inherits(password, super_);
+		var field = this,
+			schema = this.list.schema;
 
-/**
- * Registers the field on the List's Mongoose Schema.
- *
- * Adds ...
- *
- * @api public
- */
-password.prototype.addToSchema = function() {
+		this.paths = {
+			confirm: this.options.confirmPath || this._path.append('_confirm')
+		};
 
-	var field = this,
-		schema = this.list.schema;
+		schema.path(this.path, _.defaults({
+			type: String
+		}, this.options));
 
-	this.paths = {
-		confirm: this.options.confirmPath || this._path.append('_confirm')
-	};
+		schema.pre('save', function(next) {
 
-	schema.path(this.path, _.defaults({ type: String }, this.options));
+			if (!this.isModified(field.path))
+				return next();
 
-	schema.pre('save', function(next) {
+			var item = this;
 
-		if (!this.isModified(field.path))
-			return next();
-
-		if (!this.get(field.path)) {
-			this.set(field.path, undefined);
-			return next();
-		}
-
-		var item = this;
-
-		bcrypt.genSalt(field.workFactor, function(err, salt) {
-			if (err)
-				return next(err);
-
-			bcrypt.hash(item.get(field.path), salt, function () {}, function(err, hash) {
+			bcrypt.genSalt(field.workFactor, function(err, salt) {
 				if (err)
 					return next(err);
 
-				// override the cleartext password with the hashed one
-				item.set(field.path, hash);
-				next();
+				bcrypt.hash(item.get(field.path), salt, function() {}, function(err, hash) {
+					if (err)
+						return next(err);
+
+					// override the cleartext password with the hashed one
+					item.set(field.path, hash);
+					next();
+				});
 			});
+
 		});
 
-	});
+		this.underscoreMethod('compare', function(candidate, callback) {
+			bcrypt.compare(candidate, this.get(field.path), callback);
+		});
 
-	this.bindUnderscoreMethods();
+		this.bindUnderscoreMethods();
+	},
 
-};
+	/**
+	 * If password fields are required, check that either a value has been
+	 * provided or already exists in the field.
+	 *
+	 * Otherwise, input is always considered valid, as providing an empty
+	 * value will not change the password.
+	 *
+	 * @api public
+	 */
+	validateInput: function(data, required, item) {
 
+		if (!this.required) {
+			return true;
+		}
 
-/**
- * Formats the field value
- *
- * Password fields are always formatted as a random no. of asterisks,
- * because the saved hash should never be displayed nor the length
- * of the actual password hinted at.
- *
- * @api public
- */
+		if (item) {
+			return (data[this.path] || item.get(this.path)) ? true : false;
+		} else {
+			return data[this.path] ? true : false;
+		}
+	},
 
-password.prototype.format = function(item, format) {
-	if (!item.get(this.path)) return '';
-	var len = Math.round(Math.random() * 4) + 6;
-	var stars = '';
-	for (var i = 0; i < len; i++) stars += '*';
-	return stars;
-};
+	/**
+	 * Processes a filter array into a filters object
+	 *
+	 * @param {Object} ops
+	 * @param {Array} filter
+	 * @api private
+	 */
 
+	processFilters: function (ops, filter) {
+		// TODO
+	},
 
-/**
- * Compares
- *
- * @api public
- */
-
-password.prototype.compare = function(item, candidate, callback) {
-	if ('function' != typeof callback) throw new Error('Password.compare() requires a callback function.');
-	var value = item.get(this.path);
-	if (!value) return callback(null, false);
-	bcrypt.compare(candidate, item.get(this.path), callback);
-};
-
-
-/**
- * If password fields are required, check that either a value has been
- * provided or already exists in the field.
- *
- * Otherwise, input is always considered valid, as providing an empty
- * value will not change the password.
- *
- * @api public
- */
-
-password.prototype.validateInput = function(data, required, item) {
-
-	if (!this.required) {
-		return true;
+	getSearchFilters: function (filter, filters) {
+		// TODO
 	}
-
-	if (item) {
-		return (data[this.path] || item.get(this.path)) ? true : false;
-	} else {
-		return data[this.path] ? true : false;
-	}
-
-};
-
-
-/*!
- * Export class
- */
-
-exports = module.exports = password;
+});

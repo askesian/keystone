@@ -3,138 +3,132 @@
  */
 
 var _ = require('underscore'),
-	util = require('util'),
 	utils = require('keystone-utils'),
 	marked = require('marked'),
-	super_ = require('../field');
+	keystone = require('../../'),
+	Field = keystone.Field;
 
-/**
- * Markdown FieldType Constructor
- * @extends Field
- * @api public
- */
+module.exports = Field.extend({
+	/**
+	 * Markdown FieldType Constructor
+	 * @extends Field
+	 * @api public
+	 */
+	constructor: function(list, path, options) {
+		// TODO: implement filtering, usage disabled for now
+		options.nofilter = true;
+		this.height = options.height || 90;
 
-function markdown(list, path, options) {
+		Field.apply(this, arguments);
+	},
 
-	// TODO: implement filtering, usage disabled for now
-	options.nofilter = true;
+	/**
+	 * Registers the field on the List's Mongoose Schema.
+	 *
+	 * Adds String properties for .markdown and .html markdown, and a setter
+	 * for .markdown that generates html when it is updated.
+	 *
+	 * @api public
+	 */
+	addToSchema: function() {
+		var schema = this.list.schema;
 
-	this.height = options.height || 90;
-	markdown.super_.call(this, list, path, options);
+		var paths = this.paths = {
+			md: this._path.append('.md'),
+			html: this._path.append('.html')
+		};
 
-}
+		var setMarkdown = function(value) {
 
-/*!
- * Inherit from Field
- */
+			if (value == this.get(paths.md)) {
+				return value;
+			}
 
-util.inherits(markdown, super_);
+			if (typeof value == 'string') {
+				this.set(paths.html, marked(value));
+				return value;
+			} else {
+				this.set(paths.html, undefined);
+				return undefined;
+			}
 
+		};
 
-/**
- * Registers the field on the List's Mongoose Schema.
- *
- * Adds String properties for .markdown and .html markdown, and a setter
- * for .markdown that generates html when it is updated.
- *
- * @api public
- */
+		schema.nested[this.path] = true;
+		schema.add({
+			html: {
+				type: String
+			},
+			md: {
+				type: String,
+				set: setMarkdown
+			}
+		}, this.path + '.');
 
-markdown.prototype.addToSchema = function() {
+		this.bindUnderscoreMethods();
+	},
 
-	var schema = this.list.schema;
+	/**
+	 * Formats the field value
+	 *
+	 * @api public
+	 */
+	format: function(item) {
+		return item.get(this.paths.html);
+	},
 
-	var paths = this.paths = {
-		md: this._path.append('.md'),
-		html: this._path.append('.html')
-	};
+	/**
+	 * Validates that a value for this field has been provided in a data object
+	 *
+	 * Will accept either the field path, or paths.md
+	 *
+	 * @api public
+	 */
+	validateInput: function(data, required, item) {
+		if (!(this.path in data || this.paths.md in data) && item && item.get(this.paths.md)) return true;
 
-	var setMarkdown = function(value) {
+		return (!required || data[this.path] || data[this.paths.md]) ? true : false;
+	},
 
-		if (value == this.get(paths.md)) {
-			return value;
+	/**
+	 * Detects whether the field has been modified
+	 *
+	 * @api public
+	 */
+	isModified: function(item) {
+		return item.isModified(this.paths.md);
+	},
+
+	/**
+	 * Updates the value for this field in the item from a data object
+	 *
+	 * Will accept either the field path, or paths.md
+	 *
+	 * @api public
+	 */
+	updateItem: function(item, data) {
+		if (this.path in data) {
+			item.set(this.paths.md, data[this.path]);
+		} else if (this.paths.md in data) {
+			item.set(this.paths.md, data[this.paths.md]);
 		}
+	},
 
-		if (typeof value == 'string') {
-			this.set(paths.html, marked(value));
-			return value;
-		} else {
-			this.set(paths.html, undefined);
-			return undefined;
+	getSearchFilters: function (filter, filters) {
+		if (filter.exact) {
+			if (filter.value) {
+				var cond = new RegExp('^' + utils.escapeRegExp(filter.value) + '$', 'i');
+				filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
+			} else {
+				if (filter.inv) {
+					filters[filter.field.path] = { $nin: ['', null] };
+				} else {
+					filters[filter.field.path] = { $in: ['', null] };
+				}
+			}
+		} else if (filter.value) {
+			var cond = new RegExp(utils.escapeRegExp(filter.value), 'i');
+			filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
 		}
-
-	};
-
-	schema.nested[this.path] = true;
-	schema.add({
-		html: { type: String },
-		md: { type: String, set: setMarkdown }
-	}, this.path + '.');
-
-	this.bindUnderscoreMethods();
-};
-
-
-/**
- * Formats the field value
- *
- * @api public
- */
-
-markdown.prototype.format = function(item) {
-	return item.get(this.paths.html);
-};
-
-
-/**
- * Validates that a value for this field has been provided in a data object
- *
- * Will accept either the field path, or paths.md
- *
- * @api public
- */
-
-markdown.prototype.validateInput = function(data, required, item) {
-
-	if (!(this.path in data || this.paths.md in data) && item && item.get(this.paths.md)) return true;
-
-	return (!required || data[this.path] || data[this.paths.md]) ? true : false;
-
-};
-
-
-/**
- * Detects whether the field has been modified
- *
- * @api public
- */
-
-markdown.prototype.isModified = function(item) {
-	return item.isModified(this.paths.md);
-};
-
-
-/**
- * Updates the value for this field in the item from a data object
- *
- * Will accept either the field path, or paths.md
- *
- * @api public
- */
-
-markdown.prototype.updateItem = function(item, data) {
-
-	if (this.path in data) {
-		item.set(this.paths.md, data[this.path]);
-	} else if (this.paths.md in data) {
-		item.set(this.paths.md, data[this.paths.md]);
 	}
-
-};
-
-
-/*!
- * Export class
- */
-
-exports = module.exports = markdown;
+});

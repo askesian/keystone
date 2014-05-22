@@ -3,315 +3,36 @@
  */
 
 var _ = require('underscore'),
-	keystone = require('../../'),
 	querystring = require('querystring'),
 	https = require('https'),
-	util = require('util'),
 	utils = require('keystone-utils'),
-	super_ = require('../field');
+	keystone = require('../../'),
+	Field = keystone.Field;
 
 var RADIUS_KM = 6371,
 	RADIUS_MILES = 3959;
 
 /**
- * Location FieldType Constructor
- * @extends Field
- * @api public
+ * Internal Distance calculation function
+ *
+ * See http://en.wikipedia.org/wiki/Haversine_formula
+ *
+ * @api private
  */
 
-function location(list, path, options) {
+function calculateDistance(point1, point2) {
 
-	this._underscoreMethods = ['format', 'googleLookup', 'kmFrom', 'milesFrom'];
+	var dLng = (point2[0] - point1[0]) * Math.PI / 180;
+	var dLat = (point2[1] - point1[1]) * Math.PI / 180;
+	var lat1 = (point1[1]) * Math.PI / 180;
+	var lat2 = (point2[1]) * Math.PI / 180;
 
-	this.enableMapsAPI = keystone.get('google api key') ? true : false;
+	var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.sin(dLng / 2) * Math.sin(dLng / 2) * Math.cos(lat1) * Math.cos(lat2);
+	var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-	if (!options.defaults) {
-		options.defaults = {};
-	}
-
-	if (options.required) {
-		if (Array.isArray(options.required)) {
-			this.requiredPaths = options.required;
-		} else if ('string' == typeof options.required) {
-			this.requiredPaths = options.required.replace(/,/g, ' ').split(/\s+/);
-		} else {
-			this.requiredPaths = ['street1', 'suburb'];
-		}
-		options.required = true;
-	} else {
-		this.requiredPaths = [];
-	}
-
-	location.super_.call(this, list, path, options);
+	return c;
 
 }
-
-/*!
- * Inherit from Field
- */
-
-util.inherits(location, super_);
-
-
-/**
- * Registers the field on the List's Mongoose Schema.
- *
- * @api public
- */
-
-location.prototype.addToSchema = function() {
-
-	var field = this,
-		schema = this.list.schema,
-		options = this.options;
-
-	var paths = this.paths = {
-		number: this._path.append('.number'),
-		name: this._path.append('.name'),
-		street1: this._path.append('.street1'),
-		street2: this._path.append('.street2'),
-		suburb: this._path.append('.suburb'),
-		state: this._path.append('.state'),
-		postcode: this._path.append('.postcode'),
-		country: this._path.append('.country'),
-		geo: this._path.append('.geo'),
-		geo_lat: this._path.append('.geo_lat'),
-		geo_lng: this._path.append('.geo_lng'),
-		serialised: this._path.append('.serialised'),
-		improve: this._path.append('_improve'),
-		overwrite: this._path.append('_improve_overwrite')
-	};
-
-	var getFieldDef = function(type, key) {
-		var def = { type: type };
-		if (options.defaults[key]) {
-			def.default = options.defaults[key];
-		}
-		return def;
-	};
-
-	schema.nested[this.path] = true;
-	schema.add({
-		number: getFieldDef(String, 'number'),
-		name: getFieldDef(String, 'name'),
-		street1: getFieldDef(String, 'street1'),
-		street2: getFieldDef(String, 'street2'),
-		street3: getFieldDef(String, 'street3'),
-		suburb: getFieldDef(String, 'suburb'),
-		state: getFieldDef(String, 'state'),
-		postcode: getFieldDef(String, 'postcode'),
-		country: getFieldDef(String, 'country'),
-		geo: { type: [Number], index: '2dsphere' }
-	}, this.path + '.');
-
-	schema.virtual(paths.serialised).get(function() {
-		return _.compact([
-			this.get(paths.number),
-			this.get(paths.name),
-			this.get(paths.street1),
-			this.get(paths.street2),
-			this.get(paths.suburb),
-			this.get(paths.state),
-			this.get(paths.postcode),
-			this.get(paths.country)
-		]).join(', ');
-	});
-
-	// pre-save hook to fix blank geo fields
-	// see http://stackoverflow.com/questions/16388836/does-applying-a-2dsphere-index-on-a-mongoose-schema-force-the-location-field-to
-	schema.pre('save', function(next) {
-		var obj = field._path.get(this);
-		if (Array.isArray(obj.geo) && (obj.geo.length !== 2 || (obj.geo[0] === null && obj.geo[1] === null))) {
-			obj.geo = undefined;
-		}
-		next();
-	});
-
-	this.bindUnderscoreMethods();
-
-};
-
-
-/**
- * Formats a list of the values stored by the field. Only paths that
- * have values will be included.
- *
- * Optionally provide a space-separated list of values to include.
- *
- * Delimiter defaults to `', '`.
- *
- * @api public
- */
-
-location.prototype.format = function(item, values, delimiter) {
-
-	if (!values) {
-		return item.get(this.paths.serialised);
-	}
-
-	var paths = this.paths;
-
-	values = values.split(' ').map(function(i) {
-		return item.get(paths[i]);
-	});
-
-	return _.compact(values).join(delimiter || ', ');
-
-};
-
-
-/**
- * Detects whether the field has been modified
- *
- * @api public
- */
-
-location.prototype.isModified = function(item) {
-	return item.isModified(this.paths.number) ||
-		item.isModified(this.paths.name) ||
-		item.isModified(this.paths.street1) ||
-		item.isModified(this.paths.street2) ||
-		item.isModified(this.paths.suburb) ||
-		item.isModified(this.paths.state) ||
-		item.isModified(this.paths.postcode) ||
-		item.isModified(this.paths.country) ||
-		item.isModified(this.paths.geo);
-};
-
-
-/**
- * Validates that a value for this field has been provided in a data object
- *
- * options.required specifies an array or space-delimited list of paths that
- * are required (defaults to street1, suburb)
- *
- * @api public
- */
-
-location.prototype.validateInput = function(data, required, item) {
-
-	if (required) {
-
-		var paths = this.paths,
-			valid = true;
-
-		this.requiredPaths.forEach(function(path) {
-
-			if (!(paths[path] in data) && item && item.get(paths[path])) {
-				return;
-			}
-
-			if (!data[paths[path]]) {
-				valid = false;
-			}
-
-		});
-
-		return valid;
-
-	} else {
-
-		return true;
-
-	}
-};
-
-
-/**
- * Updates the value for this field in the item from a data object
- *
- * @api public
- */
-
-location.prototype.updateItem = function(item, data) {
-
-	var paths = this.paths;
-
-	var setValue = function(key) {
-		if (paths[key] in data && data[paths[key]] != item.get(paths[key])) {
-			item.set(paths[key], data[paths[key]] || null);
-		}
-	};
-
-	_.each(['number', 'name', 'street1', 'street2', 'suburb', 'state', 'postcode', 'country'], setValue);
-
-	if (paths.geo in data) {
-
-		var oldGeo = item.get(paths.geo) || [],
-			newGeo = data[paths.geo];
-
-		if (!Array.isArray(newGeo) || newGeo.length != 2) {
-			newGeo = [];
-		}
-
-		if (newGeo[0] != oldGeo[0] || newGeo[1] != oldGeo[1]) {
-			item.set(paths.geo, newGeo);
-		}
-
-	} else if (paths.geo_lat in data && paths.geo_lng in data) {
-
-		var lat = utils.number(data[paths.geo_lat]),
-			lng = utils.number(data[paths.geo_lng]);
-
-		if (lat && lng) {
-			item.set(paths.geo, [lng, lat]);
-		}
-
-	}
-
-};
-
-
-/**
- * Returns a callback that handles a standard form submission for the field
- *
- * Handles:
- * - `field.paths.improve` in `req.body` - improves data via `.googleLookup()`
- * - `field.paths.overwrite` in `req.body` - in conjunction with `improve`, overwrites existing data
- *
- * @api public
- */
-
-location.prototype.getRequestHandler = function(item, req, paths, callback) {
-
-	var field = this;
-
-	if (utils.isFunction(paths)) {
-		callback = paths;
-		paths = field.paths;
-	} else if (!paths) {
-		paths = field.paths;
-	}
-
-	callback = callback || function() {};
-
-	return function() {
-
-		var update = req.body[paths.overwrite] ? 'overwrite' : true;
-
-		if (req.body && req.body[paths.improve]) {
-			field.googleLookup(item, false, update, function() {
-				callback();
-			});
-		} else {
-			callback();
-		}
-
-	};
-
-};
-
-
-/**
- * Immediately handles a standard form submission for the field (see `getRequestHandler()`)
- *
- * @api public
- */
-
-location.prototype.handleRequest = function(item, req, paths, callback) {
-	this.getRequestHandler(item, req, paths, callback)();
-};
-
 
 /**
  * Internal Google geocode request method
@@ -346,173 +67,443 @@ function doGoogleGeocodeRequest(address, region, callback) {
 	https.get(endpoint, function(res) {
 		var data = [];
 		res.on('data', function(chunk) {
-				data.push(chunk);
-			})
+			data.push(chunk);
+		})
 			.on('end', function() {
 				var dataBuff = data.join('').trim();
 				var result;
 				try {
 					result = JSON.parse(dataBuff);
-				}
-				catch (exp) {
-					result = {'status_code': 500, 'status_text': 'JSON Parse Failed', 'status': 'UNKNOWN_ERROR'};
+				} catch (exp) {
+					result = {
+						'status_code': 500,
+						'status_text': 'JSON Parse Failed',
+						'status': 'UNKNOWN_ERROR'
+					};
 				}
 				callback(null, result);
 			});
 	})
-	.on('error', function(err) {
-		callback(err);
-	});
+		.on('error', function(err) {
+			callback(err);
+		});
 }
 
 
-/**
- * Autodetect the full address and lat, lng from the stored value.
- *
- * Uses Google's Maps API and may only be used in conjunction with a Google map.
- * Geocoding results without displaying them on a map is prohibited.
- * Please make sure your Keystone app complies with the Google Maps API License.
- *
- * Internal status codes mimic the Google API status codes.
- *
- * @api private
- */
+module.exports = Field.extend({
+	/**
+	 * Location FieldType Constructor
+	 * @extends Field
+	 * @api public
+	 */
+	constructor: function(list, path, options) {
+		this._underscoreMethods = ['format', 'googleLookup', 'kmFrom', 'milesFrom'];
 
-location.prototype.googleLookup = function(item, region, update, callback) {
+		this.enableMapsAPI = keystone.get('google api key') ? true : false;
 
-	if ('function' == typeof update) {
-		callback = update;
-		update = false;
-	}
-
-	var field = this,
-		stored = item.get(this.path),
-		address = item.get(this.paths.serialised);
-
-	if (address.length === 0) {
-		return callback({'status_code': 500, 'status_text': 'No address to geocode', 'status': 'NO_ADDRESS'});
-	}
-
-	doGoogleGeocodeRequest(address, region || keystone.get('default region'), function(err, geocode){
-
-		if (err || geocode.status != 'OK') {
-			return callback(err);
+		if (!options.defaults) {
+			options.defaults = {};
 		}
 
-		// use the first result
-		// if there were no results in the array, status would be ZERO_RESULTS
-		var result = geocode.results[0];
+		if (options.required) {
+			if (Array.isArray(options.required)) {
+				this.requiredPaths = options.required;
+			} else if ('string' == typeof options.required) {
+				this.requiredPaths = options.required.replace(/,/g, ' ').split(/\s+/);
+			} else {
+				this.requiredPaths = ['street1', 'suburb'];
+			}
+			options.required = true;
+		} else {
+			this.requiredPaths = [];
+		}
 
-		// parse the address components into a location object
+		Field.apply(this, arguments);
+	},
 
-		var location = {};
+	/**
+	 * Registers the field on the List's Mongoose Schema.
+	 *
+	 * @api public
+	 */
+	addToSchema: function() {
+		var field = this,
+			schema = this.list.schema,
+			options = this.options;
 
-		_.each(result.address_components, function(val,key){
-			if ( _.indexOf(val.types,'street_number') >= 0 ) {
-				location.street1 = location.street1 || [];
-				location.street1.push(val.long_name);
+		var paths = this.paths = {
+			number: this._path.append('.number'),
+			name: this._path.append('.name'),
+			street1: this._path.append('.street1'),
+			street2: this._path.append('.street2'),
+			suburb: this._path.append('.suburb'),
+			state: this._path.append('.state'),
+			postcode: this._path.append('.postcode'),
+			country: this._path.append('.country'),
+			geo: this._path.append('.geo'),
+			geo_lat: this._path.append('.geo_lat'),
+			geo_lng: this._path.append('.geo_lng'),
+			serialised: this._path.append('.serialised'),
+			improve: this._path.append('_improve'),
+			overwrite: this._path.append('_improve_overwrite')
+		};
+
+		var getFieldDef = function(type, key) {
+			var def = {
+				type: type
+			};
+			if (options.defaults[key]) {
+				def.
+				default = options.defaults[key];
 			}
-			if ( _.indexOf(val.types,'route') >= 0 ) {
-				location.street1 = location.street1 || [];
-				location.street1.push(val.short_name);
+			return def;
+		};
+
+		schema.nested[this.path] = true;
+		schema.add({
+			number: getFieldDef(String, 'number'),
+			name: getFieldDef(String, 'name'),
+			street1: getFieldDef(String, 'street1'),
+			street2: getFieldDef(String, 'street2'),
+			street3: getFieldDef(String, 'street3'),
+			suburb: getFieldDef(String, 'suburb'),
+			state: getFieldDef(String, 'state'),
+			postcode: getFieldDef(String, 'postcode'),
+			country: getFieldDef(String, 'country'),
+			geo: {
+				type: [Number],
+				index: '2dsphere'
 			}
-			// in some cases, you get suburb, city as locality - so only use the first
-			if ( _.indexOf(val.types,'locality') >= 0 && !location.suburb) {
-				location.suburb = val.long_name;
-			}
-			if ( _.indexOf(val.types,'administrative_area_level_1') >= 0 ) {
-				location.state = val.short_name;
-			}
-			if ( _.indexOf(val.types,'country') >= 0 ) {
-				location.country = val.long_name;
-			}
-			if ( _.indexOf(val.types,'postal_code') >= 0 ) {
-				location.postcode = val.short_name;
-			}
+		}, this.path + '.');
+
+		schema.virtual(paths.serialised).get(function() {
+			return _.compact([
+				this.get(paths.number),
+				this.get(paths.name),
+				this.get(paths.street1),
+				this.get(paths.street2),
+				this.get(paths.suburb),
+				this.get(paths.state),
+				this.get(paths.postcode),
+				this.get(paths.country)
+			]).join(', ');
 		});
 
-		if (Array.isArray(location.street1))
-			location.street1 = location.street1.join(' ');
-
-		location.geo = [
-			result.geometry.location.lng,
-			result.geometry.location.lat
-		];
-
-		//console.log('------ Google Geocode Results ------');
-		//console.log(address);
-		//console.log(result);
-		//console.log(location);
-
-		if (update == 'overwrite') {
-			item.set(field.path, location);
-		} else if (update) {
-			_.each(location, function(value, key) {
-				if (key == 'geo') {
-					return;
-				}
-				if (!stored[key]) {
-					item.set(field.paths[key], value);
-				}
-			});
-			if (!Array.isArray(stored.geo) || !stored.geo[0] || !stored.geo[1]) {
-				item.set(field.paths.geo, location.geo);
+		// pre-save hook to fix blank geo fields
+		// see http://stackoverflow.com/questions/16388836/does-applying-a-2dsphere-index-on-a-mongoose-schema-force-the-location-field-to
+		schema.pre('save', function(next) {
+			var obj = field._path.get(this);
+			if (Array.isArray(obj.geo) && (obj.geo.length !== 2 || (obj.geo[0] === null && obj.geo[1] === null))) {
+				obj.geo = undefined;
 			}
+			next();
+		});
+
+		this.bindUnderscoreMethods();
+	},
+
+	/**
+	 * Formats a list of the values stored by the field. Only paths that
+	 * have values will be included.
+	 *
+	 * Optionally provide a space-separated list of values to include.
+	 *
+	 * Delimiter defaults to `', '`.
+	 *
+	 * @api public
+	 */
+	format: function(item, values, delimiter) {
+		if (!values) {
+			return item.get(this.paths.serialised);
 		}
 
-		callback(null, location, result);
+		var paths = this.paths;
 
-	});
-};
+		values = values.split(' ').map(function(i) {
+			return item.get(paths[i]);
+		});
 
+		return _.compact(values).join(delimiter || ', ');
+	},
 
-/**
- * Internal Distance calculation function
- *
- * See http://en.wikipedia.org/wiki/Haversine_formula
- *
- * @api private
- */
+	/**
+	 * Detects whether the field has been modified
+	 *
+	 * @api public
+	 */
+	isModified: function(item) {
+		return item.isModified(this.paths.number) || item.isModified(this.paths.name) || item.isModified(this.paths.street1) || item.isModified(this.paths.street2) || item.isModified(this.paths.suburb) || item.isModified(this.paths.state) || item.isModified(this.paths.postcode) || item.isModified(this.paths.country) || item.isModified(this.paths.geo);
+	},
 
-function calculateDistance(point1, point2) {
+	/**
+	 * Validates that a value for this field has been provided in a data object
+	 *
+	 * options.required specifies an array or space-delimited list of paths that
+	 * are required (defaults to street1, suburb)
+	 *
+	 * @api public
+	 */
+	validateInput: function(data, required, item) {
 
-	var dLng = (point2[0] - point1[0]) * Math.PI / 180;
-	var dLat = (point2[1] - point1[1]) * Math.PI / 180;
-	var lat1 = (point1[1]) * Math.PI / 180;
-	var lat2 = (point2[1]) * Math.PI / 180;
+		if (required) {
 
-	var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.sin(dLng/2) * Math.sin(dLng/2) * Math.cos(lat1) * Math.cos(lat2);
-	var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+			var paths = this.paths,
+				valid = true;
 
-	return c;
+			this.requiredPaths.forEach(function(path) {
 
-}
+				if (!(paths[path] in data) && item && item.get(paths[path])) {
+					return;
+				}
 
+				if (!data[paths[path]]) {
+					valid = false;
+				}
 
-/**
- * Returns the distance from a [lat,lng] point in kilometres
- *
- * @api public
- */
+			});
 
-location.prototype.kmFrom = function(item, point) {
-	return calculateDistance(this.get(this.paths.geo), point) * RADIUS_KM;
-};
+			return valid;
 
+		} else {
 
-/**
- * Returns the distance from a [lat,lng] point in miles
- *
- * @api public
- */
+			return true;
 
-location.prototype.milesFrom = function(item, point) {
-	return calculateDistance(this.get(this.paths.geo), point) * RADIUS_MILES;
-};
+		}
+	},
 
+	/**
+	 * Updates the value for this field in the item from a data object
+	 *
+	 * @api public
+	 */
+	updateItem: function(item, data) {
+		var paths = this.paths;
 
-/*!
- * Export class
- */
+		var setValue = function(key) {
+			if (paths[key] in data && data[paths[key]] != item.get(paths[key])) {
+				item.set(paths[key], data[paths[key]] || null);
+			}
+		};
 
-exports = module.exports = location;
+		_.each(['number', 'name', 'street1', 'street2', 'suburb', 'state', 'postcode', 'country'], setValue);
+
+		if (paths.geo in data) {
+
+			var oldGeo = item.get(paths.geo) || [],
+				newGeo = data[paths.geo];
+
+			if (!Array.isArray(newGeo) || newGeo.length != 2) {
+				newGeo = [];
+			}
+
+			if (newGeo[0] != oldGeo[0] || newGeo[1] != oldGeo[1]) {
+				item.set(paths.geo, newGeo);
+			}
+
+		} else if (paths.geo_lat in data && paths.geo_lng in data) {
+
+			var lat = utils.number(data[paths.geo_lat]),
+				lng = utils.number(data[paths.geo_lng]);
+
+			if (lat && lng) {
+				item.set(paths.geo, [lng, lat]);
+			}
+		}
+	},
+
+	/**
+	 * Returns a callback that handles a standard form submission for the field
+	 *
+	 * Handles:
+	 * - `field.paths.improve` in `req.body` - improves data via `.googleLookup()`
+	 * - `field.paths.overwrite` in `req.body` - in conjunction with `improve`, overwrites existing data
+	 *
+	 * @api public
+	 */
+	getRequestHandler: function(item, req, paths, callback) {
+		var field = this;
+
+		if (utils.isFunction(paths)) {
+			callback = paths;
+			paths = field.paths;
+		} else if (!paths) {
+			paths = field.paths;
+		}
+
+		callback = callback || function() {};
+
+		return function() {
+
+			var update = req.body[paths.overwrite] ? 'overwrite' : true;
+
+			if (req.body && req.body[paths.improve]) {
+				field.googleLookup(item, false, update, function() {
+					callback();
+				});
+			} else {
+				callback();
+			}
+		};
+	},
+
+	/**
+	 * Immediately handles a standard form submission for the field (see `getRequestHandler()`)
+	 *
+	 * @api public
+	 */
+	handleRequest: function(item, req, paths, callback) {
+		this.getRequestHandler(item, req, paths, callback)();
+	},
+
+	/**
+	 * Autodetect the full address and lat, lng from the stored value.
+	 *
+	 * Uses Google's Maps API and may only be used in conjunction with a Google map.
+	 * Geocoding results without displaying them on a map is prohibited.
+	 * Please make sure your Keystone app complies with the Google Maps API License.
+	 *
+	 * Internal status codes mimic the Google API status codes.
+	 *
+	 * @api private
+	 */
+	googleLookup: function(item, region, update, callback) {
+		if ('function' == typeof update) {
+			callback = update;
+			update = false;
+		}
+
+		var field = this,
+			stored = item.get(this.path),
+			address = item.get(this.paths.serialised);
+
+		if (address.length === 0) {
+			return callback({
+				'status_code': 500,
+				'status_text': 'No address to geocode',
+				'status': 'NO_ADDRESS'
+			});
+		}
+
+		doGoogleGeocodeRequest(address, region || keystone.get('default region'), function(err, geocode) {
+			if (err || geocode.status != 'OK') {
+				return callback(err);
+			}
+
+			// use the first result
+			// if there were no results in the array, status would be ZERO_RESULTS
+			var result = geocode.results[0];
+
+			// parse the address components into a location object
+
+			var location = {};
+
+			_.each(result.address_components, function(val, key) {
+				if (_.indexOf(val.types, 'street_number') >= 0) {
+					location.street1 = location.street1 || [];
+					location.street1.push(val.long_name);
+				}
+				if (_.indexOf(val.types, 'route') >= 0) {
+					location.street1 = location.street1 || [];
+					location.street1.push(val.short_name);
+				}
+				// in some cases, you get suburb, city as locality - so only use the first
+				if (_.indexOf(val.types, 'locality') >= 0 && !location.suburb) {
+					location.suburb = val.long_name;
+				}
+				if (_.indexOf(val.types, 'administrative_area_level_1') >= 0) {
+					location.state = val.short_name;
+				}
+				if (_.indexOf(val.types, 'country') >= 0) {
+					location.country = val.long_name;
+				}
+				if (_.indexOf(val.types, 'postal_code') >= 0) {
+					location.postcode = val.short_name;
+				}
+			});
+
+			if (Array.isArray(location.street1))
+				location.street1 = location.street1.join(' ');
+
+			location.geo = [
+				result.geometry.location.lng,
+				result.geometry.location.lat
+			];
+
+			//console.log('------ Google Geocode Results ------');
+			//console.log(address);
+			//console.log(result);
+			//console.log(location);
+
+			if (update == 'overwrite') {
+				item.set(field.path, location);
+			} else if (update) {
+				_.each(location, function(value, key) {
+					if (key == 'geo') {
+						return;
+					}
+					if (!stored[key]) {
+						item.set(field.paths[key], value);
+					}
+				});
+				if (!Array.isArray(stored.geo) || !stored.geo[0] || !stored.geo[1]) {
+					item.set(field.paths.geo, location.geo);
+				}
+			}
+
+			callback(null, location, result);
+
+		});
+	},
+
+	/**
+	 * Returns the distance from a [lat,lng] point in kilometres
+	 *
+	 * @api public
+	 */
+	kmFrom: function(item, point) {
+		return calculateDistance(this.get(this.paths.geo), point) * RADIUS_KM;
+	},
+
+	/**
+	 * Returns the distance from a [lat,lng] point in miles
+	 *
+	 * @api public
+	 */
+	milesFrom: function(item, point) {
+		return calculateDistance(this.get(this.paths.geo), point) * RADIUS_MILES;
+	},
+
+	/**
+	 * Processes a filter array into a filters object
+	 *
+	 * @param {Object} ops
+	 * @param {Array} filter
+	 * @api private
+	 */
+
+	processFilters: function (ops, filter) {
+		ops.address = filter[0];
+		ops.suburb = filter[1];
+		ops.state = filter[2];
+		ops.postcode = filter[3];
+		ops.country = filter[4];
+	},
+
+	getSearchFilters: function (filter, filters) {
+		if (filter.address) {
+			filters[filter.field.paths.street1] = new RegExp(utils.escapeRegExp(filter.address), 'i');
+		}
+		if (filter.suburb) {
+			filters[filter.field.paths.suburb] = new RegExp(utils.escapeRegExp(filter.suburb), 'i');
+		}
+		if (filter.state) {
+			filters[filter.field.paths.state] = new RegExp(utils.escapeRegExp(filter.state), 'i');
+		}
+		if (filter.postcode) {
+			filters[filter.field.paths.postcode] = new RegExp(utils.escapeRegExp(filter.postcode), 'i');
+		}
+		if (filter.country) {
+			filters[filter.field.paths.country] = new RegExp(utils.escapeRegExp(filter.country), 'i');
+		}
+	}
+});

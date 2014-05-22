@@ -2,39 +2,43 @@
  * Module dependencies.
  */
 
-var util = require('util'),
-	utils = require('keystone-utils'),
-	super_ = require('../field');
+var utils = require('keystone-utils'),
+    keystone = require('../../'),
+    Field = keystone.Field;
 
-/**
- * HTML FieldType Constructor
- * @extends Field
- * @api public
- */
+module.exports = Field.extend({
+    /**
+     * HTML FieldType Constructor
+     * @extends Field
+     * @api public
+     */
+    constructor: function(list, path, options) {
+        this._nativeType = String;
 
-function html(list, path, options) {
+        // TODO: implement filtering, usage disabled for now
+        options.nofilter = true;
 
-	this._nativeType = String;
+        this.wysiwyg = (options.wysiwyg) ? true : false;
+        this.height = options.height || 180;
 
-	// TODO: implement filtering, usage disabled for now
-	options.nofilter = true;
+        Field.apply(this, arguments);
+    },
 
-	this.wysiwyg = (options.wysiwyg) ? true : false;
-	this.height = options.height || 180;
-
-	html.super_.call(this, list, path, options);
-
-}
-
-/*!
- * Inherit from Field
- */
-
-util.inherits(html, super_);
-
-
-/*!
- * Export class
- */
-
-exports = module.exports = html;
+    getSearchFilters: function (filter, filters) {
+        if (filter.exact) {
+            if (filter.value) {
+                var cond = new RegExp('^' + utils.escapeRegExp(filter.value) + '$', 'i');
+                filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
+            } else {
+                if (filter.inv) {
+                    filters[filter.field.path] = { $nin: ['', null] };
+                } else {
+                    filters[filter.field.path] = { $in: ['', null] };
+                }
+            }
+        } else if (filter.value) {
+            var cond = new RegExp(utils.escapeRegExp(filter.value), 'i');
+            filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
+        }
+    }
+});

@@ -6,27 +6,16 @@ var util = require('util'),
     utils = require('keystone-utils'),
     super_ = require('../field');
 
-/**
- * Color FieldType Constructor
- * @extends Field
- * @api public
- */
+module.exports = Field.extend({
+    /**
+     * Color FieldType Constructor
+     * @extends Field
+     * @api public
+     */
+    constructor: function(list, path, options) {
+        this._nativeType = String;
+        this._underscoreMethods = [];
 
-function color(list, path, options) {
-    this._nativeType = String;
-    this._underscoreMethods = [];
-    color.super_.call(this, list, path, options);
-}
-
-/*!
- * Inherit from Field
- */
-
-util.inherits(color, super_);
-
-
-/*!
- * Export class
- */
-
-exports = module.exports = color;
+        Field.apply(this, arguments);
+    }
+});

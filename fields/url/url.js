@@ -1,49 +1,55 @@
 /*!
  * Module dependencies.
  */
+'use strict';
 
-var util = require('util'),
-	numeral = require('numeral'),
-	utils = require('keystone-utils'),
-	super_ = require('../field');
+var utils = require('keystone-utils'),
+    keystone = require('../../'),
+    Field = keystone.Field;
 
-/**
- * URL FieldType Constructor
- * @extends Field
- * @api public
- */
+module.exports = Field.extend({
+    /**
+     * URL FieldType Constructor
+     * @extends Field
+     * @api public
+     */
+    constructor: function(list, path, options) {
+        this._nativeType = String;
+        this._underscoreMethods = ['format'];
 
-function url(list, path, options) {
-	this._nativeType = String;
-	this._underscoreMethods = ['format'];
-	url.super_.call(this, list, path, options);
-}
+        Field.apply(this, arguments);
+    },
 
-/*!
- * Inherit from Field
- */
+    /**
+     * Formats the field value
+     *
+     * Strips the leading protocol from the value for simpler display
+     *
+     * @api public
+     */
+    format: function(item, format) {
+        return (item.get(this.path) || '').replace(/^[a-zA-Z]\:\/\//, '');
+    },
 
-util.inherits(url, super_);
+    getSearchFilters: function (filter, filters) {
+        var cond;
 
+        if (filter.exact) {
+            if (filter.value) {
+                cond = new RegExp('^' + utils.escapeRegExp(filter.value) + '$', 'i');
+                filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
+            } else {
+                if (filter.inv) {
+                    filters[filter.field.path] = { $nin: ['', null] };
+                } else {
+                    filters[filter.field.path] = { $in: ['', null] };
+                }
+            }
+        } else if (filter.value) {
+            cond = new RegExp(utils.escapeRegExp(filter.value), 'i');
+            filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
+        }
+    }
+    // TODO: Proper url validation
 
-/**
- * Formats the field value
- *
- * Strips the leading protocol from the value for simpler display
- *
- * @api public
- */
-
-url.prototype.format = function(item, format) {
-	return (item.get(this.path) || '').replace(/^[a-zA-Z]\:\/\//, '');
-};
-
-
-// TODO: Proper url validation
-
-
-/*!
- * Export class
- */
-
-exports = module.exports = url;
+});
