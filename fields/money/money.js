@@ -17,7 +17,7 @@ function money(list, path, options) {
 	this._nativeType = Number;
 	this._underscoreMethods = ['format'];
 	this._formatString = (options.format === false) ? false : (options.format || '$0,0.00');
-	if (this._formatString && 'string' != typeof this._formatString) {
+	if (this._formatString && 'string' !== typeof this._formatString) {
 		throw new Error('FieldType.Money: options.format must be a string.');
 	}
 	money.super_.call(this, list, path, options);
@@ -38,7 +38,7 @@ util.inherits(money, super_);
 
 money.prototype.format = function(item, format) {
 	if (format || this._formatString) {
-		return ('number' == typeof item.get(this.path)) ? numeral(item.get(this.path)).format(format || this._formatString) : '';
+		return ('number' === typeof item.get(this.path)) ? numeral(item.get(this.path)).format(format || this._formatString) : '';
 	} else {
 		return item.get(this.path) || '';
 	}
@@ -53,7 +53,7 @@ money.prototype.format = function(item, format) {
  * @api public
  */
 
-money.prototype.validateInput = function(data, required) {
+money.prototype.validateInput = function(data, required, item) {
 
 	if (!(this.path in data) && item && (item.get(this.path) || item.get(this.path) === 0)) return true;
 
@@ -81,10 +81,10 @@ money.prototype.updateItem = function(item, data) {
 	var newValue = utils.number(data[this.path]);
 
 	if (!isNaN(newValue)) {
-		if (newValue != item.get(this.path)) {
+		if (newValue !== item.get(this.path)) {
 			item.set(this.path, newValue);
 		}
-	} else if ('number' == typeof item.get(this.path)) {
+	} else if ('number' === typeof item.get(this.path)) {
 		item.set(this.path, null);
 	}
 
