@@ -97,6 +97,8 @@ var Keystone = function() {
 		this.set('cloudinary config', true);
 	}
 
+	this.initAPI = require('./lib/middleware/initAPI')(this);
+
 };
 
 
@@ -126,8 +128,10 @@ var remappedOptions = {
 	}
 
 	if (remappedOptions[key]) {
-		console.log('Warning: the `' + key + '` option has been deprecated. Please use `' + remappedOptions[key] + '` instead.\n\n' +
-			'Support for `' + key + '` will be removed in a future version.');
+		if (this.get('logger')) {
+			console.log('Warning: the `' + key + '` option has been deprecated. Please use `' + remappedOptions[key] + '` instead.\n\n' +
+				'Support for `' + key + '` will be removed in a future version.');
+		}
 		key = remappedOptions[key];
 	}
 
@@ -138,20 +142,20 @@ var remappedOptions = {
 				cloudinary.config(value);
 			}
 			value = cloudinary.config();
-		break;
+			break;
 		case 'mandrill api key':
 			if (value) {
 				this.mandrillAPI = new mandrillapi.Mandrill(value);
 			}
-		break;
+			break;
 		case 'auth':
 			if (value === true && !this.get('session')) {
 				this.set('session', true);
 			}
-		break;
+			break;
 		case 'nav':
 			this.nav = this.initNav(value);
-		break;
+			break;
 	}
 
 	this._options[key] = value;
@@ -256,7 +260,7 @@ Keystone.prototype.pre = function(event, fn) {
 
 Keystone.prototype.connect = function() {
 	// detect type of each argument
-	for (var i = 0; i < arguments.length; i++) {
+	for (var i = 0, len = arguments.length; i < len; i++) {
 		if (arguments[i].constructor.name === 'Mongoose') {
 			// detected Mongoose
 			this.mongoose = arguments[i];
@@ -1185,7 +1189,7 @@ Keystone.prototype.import = function(dirname) {
 
 			var fsPath = path.join(fromPath, name),
 			info = fs.statSync(fsPath);
-			
+
 			// recur
 			if (info.isDirectory()) {
 				imported[name] = doImport(fsPath);
