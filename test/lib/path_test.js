@@ -79,4 +79,4 @@ describe("Path", function() {
 			path.exceptLast.must.equal("foo.example")
 		})
 	})
-})
+});

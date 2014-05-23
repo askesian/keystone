@@ -1,11 +1,14 @@
+'use strict';
+
 var demand = require('must'),
 	di = require('../../lib/asyncdi');
 
 var fn_basic = function() { return true; };
 var fn_async = function(callback) { callback(null, true) };
+var fn_one = function(one) { return true; };
 
-describe('asyncdi', function() {
-	describe('new', function() {
+describe('AsyncDI', function() {
+	describe('new Wrapper', function() {
 		it('must be an instance of Wrapper', function() {
 			new di.Wrapper(fn_basic).must.be.an.instanceof(di.Wrapper);
 		});
@@ -48,4 +51,14 @@ describe('asyncdi', function() {
 			});
 		});
 	});
-})
+	describe('fn_one.requires', function() {
+		it('must require `one`', function() {
+			demand(di(fn_one).requires.one).be.true();
+		});
+	});
+	describe('fn_one.requires', function() {
+		it('must not require `two`', function() {
+			demand(di(fn_one).requires.two).be.undefined();
+		});
+	});
+});
