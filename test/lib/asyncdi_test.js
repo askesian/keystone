@@ -1,5 +1,3 @@
-'use strict';
-
 var demand = require('must'),
 	di = require('../../lib/asyncdi');
 
@@ -61,4 +59,4 @@ describe('AsyncDI', function() {
 			demand(di(fn_one).requires.two).be.undefined();
 		});
 	});
-});
+})

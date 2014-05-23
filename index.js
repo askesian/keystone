@@ -38,7 +38,7 @@ var moduleRoot = (function(_rootPath) {
  */
 
 var Keystone = function() {
-
+	
 	this.lists = {};
 	this.paths = {};
 	this._options = {
@@ -54,26 +54,26 @@ var Keystone = function() {
 		render: []
 	};
 	this._redirects = {};
-
+	
 	// expose express
-
+	
 	this.express = express;
-
-
+	
+	
 	// init environment defaults
-
+	
 	this.set('env', process.env.NODE_ENV || 'development');
-
+	
 	this.set('port', process.env.PORT);
 	this.set('host', process.env.HOST || process.env.IP);
 	this.set('listen', process.env.LISTEN);
-
+	
 	this.set('ssl', process.env.SSL);
 	this.set('ssl port', process.env.SSL_PORT);
 	this.set('ssl host', process.env.SSL_HOST || process.env.SSL_IP);
 	this.set('ssl key', process.env.SSL_KEY);
 	this.set('ssl cert', process.env.SSL_CERT);
-
+	
 	this.set('cookie secret', process.env.COOKIE_SECRET);
 	this.set('embedly api key', process.env.EMBEDLY_API_KEY || process.env.EMBEDLY_APIKEY);
 	this.set('mandrill api key', process.env.MANDRILL_API_KEY || process.env.MANDRILL_APIKEY);
@@ -85,15 +85,15 @@ var Keystone = function() {
 	this.set('chartbeat property', process.env.CHARTBEAT_PROPERTY);
 	this.set('chartbeat domain', process.env.CHARTBEAT_DOMAIN);
 	this.set('allowed ip ranges', process.env.ALLOWED_IP_RANGES);
-
+	
 	if (process.env.S3_BUCKET && process.env.S3_KEY && process.env.S3_SECRET) {
 		this.set('s3 config', { bucket: process.env.S3_BUCKET, key: process.env.S3_KEY, secret: process.env.S3_SECRET, region: process.env.S3_REGION });
 	}
-
+	
 	if (process.env.AZURE_STORAGE_ACCOUNT && process.env.AZURE_STORAGE_ACCESS_KEY) {
 		this.set('azurefile config', { account: process.env.AZURE_STORAGE_ACCOUNT, key: process.env.AZURE_STORAGE_ACCESS_KEY });
 	}
-
+	
 	if (process.env.CLOUDINARY_URL) {
 		// process.env.CLOUDINARY_URL is processed by the cloudinary package when this is set
 		this.set('cloudinary config', true);
@@ -309,7 +309,7 @@ keystone.Email = require('./lib/email');
  */
 
 Keystone.prototype.init = function(options) {
-
+	
 	this.options(options);
 
 	if (!this.app) {
@@ -505,7 +505,7 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 	}
 
 	if (!this.get('headless')) {
-			keystone.static(app);
+		keystone.static(app);
 	}
 
 	// Handle dynamic requests
@@ -520,7 +520,11 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 	if (this.get('cookie secret')) {
 		app.use(express.cookieParser(this.get('cookie secret')));
 	}
-	app.use(express.session());
+	
+	app.use(express.session({
+		key: 'keystone.sid'
+	}));
+	
 	app.use(require('connect-flash')());
 
 	if (this.get('session') === true) {
@@ -557,8 +561,10 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 			app.use(fn);
 		}
 		catch(e) {
-			console.log('Pre-route middleware (not found):');
-			console.log(e);
+			if (keystone.get('logger')) {
+				console.log('Invalid pre-route middleware provided');
+			}
+			throw e;
 		}
 	});
 
@@ -601,13 +607,17 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 				} else if ('string' === typeof err404) {
 					res.status(404).render(err404);
 				} else {
-					console.log(dashes + 'Error handling 404 (not found): Invalid type (' + (typeof err404) + ') for 404 setting.' + dashes);
+					if (keystone.get('logger')) {
+						console.log(dashes + 'Error handling 404 (not found): Invalid type (' + (typeof err404) + ') for 404 setting.' + dashes);
+					}
 					default404Handler(req, res, next);
 				}
 			} catch(e) {
-				console.log(dashes + 'Error handling 404 (not found):');
-				console.log(e);
-				console.log(dashes);
+				if (keystone.get('logger')) {
+					console.log(dashes + 'Error handling 404 (not found):');
+					console.log(e);
+					console.log(dashes);
+				}
 				default404Handler(req, res, next);
 			}
 		} else {
@@ -619,13 +629,15 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 	// Handle other errors
 
 	var default500Handler = function(err, req, res, next) {
-
-		if (err instanceof Error) {
-			console.log((err.type ? err.type + ' ' : '') + 'Error thrown for request: ' + req.url);
-			console.log(err.message);
-		} else {
-			console.log('Error thrown for request: ' + req.url);
-			console.log(err);
+		
+		if (keystone.get('logger')) {
+			if (err instanceof Error) {
+				console.log((err.type ? err.type + ' ' : '') + 'Error thrown for request: ' + req.url);
+				console.log(err.message);
+			} else {
+				console.log('Error thrown for request: ' + req.url);
+				console.log(err);
+			}
 		}
 
 		var msg = '';
@@ -659,13 +671,17 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 					res.locals.err = err;
 					res.status(500).render(err500);
 				} else {
-					console.log(dashes + 'Error handling 500 (error): Invalid type (' + (typeof err500) + ') for 500 setting.' + dashes);
+					if (keystone.get('logger')) {
+						console.log(dashes + 'Error handling 500 (error): Invalid type (' + (typeof err500) + ') for 500 setting.' + dashes);
+					}
 					default500Handler(err, req, res, next);
 				}
 			} catch(e) {
-				console.log(dashes + 'Error handling 500 (error):');
-				console.log(e);
-				console.log(dashes);
+				if (keystone.get('logger')) {
+					console.log(dashes + 'Error handling 500 (error):');
+					console.log(e);
+					console.log(dashes);
+				}
 				default500Handler(err, req, res, next);
 			}
 		} else {
@@ -691,10 +707,12 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 	this.mongoose.connect.apply(this.mongoose, Array.isArray(mongooseArgs) ? mongooseArgs : [mongooseArgs]);
 
 	this.mongoose.connection.on('error', function(err) {
-
-		console.log('------------------------------------------------');
-		console.log('Mongo Error:\n');
-		console.log(err);
+		
+		if (keystone.get('logger')) {
+			console.log('------------------------------------------------');
+			console.log('Mongo Error:\n');
+			console.log(err);
+		}
 
 		if (mongoConnectionOpen) {
 			throw new Error("Mongo Error");
@@ -791,7 +809,9 @@ Keystone.prototype.start = function(events) {
 		var serverStarted = function() {
 			waitForServers--;
 			if (waitForServers) return;
-			console.log(dashes + startupMessages.join('\n') + dashes);
+			if (keystone.get('logger')) {
+				console.log(dashes + startupMessages.join('\n') + dashes);
+			}
 			events.onStart && events.onStart();
 		};
 
@@ -1504,9 +1524,11 @@ Keystone.prototype.wrapHTMLError = function(title, err) {
 
 Keystone.prototype.console = {};
 Keystone.prototype.console.err = function(type, msg) {
-
-	var dashes = '\n------------------------------------------------\n';
-	console.log(dashes + 'KeystoneJS: ' + type + ':\n\n' + msg + dashes);
+	
+	if (keystone.get('logger')) {
+		var dashes = '\n------------------------------------------------\n';
+		console.log(dashes + 'KeystoneJS: ' + type + ':\n\n' + msg + dashes);
+	}
 
 };
 

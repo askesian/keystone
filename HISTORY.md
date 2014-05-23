@@ -1,5 +1,23 @@
 # Keystone
 
+## v0.2.18 / 2014-05-22
+
+* added; callbacks passed to `View.render()` are now passed `err, req, res`
+* fixed; console logging is suppressed when the option `logger` is `false`
+* fixed; issues relating to session cookies
+* fixed; a lot of minor code issues and cleanup
+* improved; test coverage
+
+## v0.2.17 / 2014-05-19
+
+* added; between filtering to date, datetime, money, and number field
+types, thanks [Benjamin Lupton](https://github.com/balupton)
+* added; new color field, thanks [Frederic Beaudet](https://github.com/fbeaudet)
+* added; automated unit tests with TravisCI, thanks [James Allen](https://github.com/jamlen) and [Andri Möll](https://github.com/moll)
+* added; .jshintrc config and better settings for .editorconfig, thanks [James Allen](https://github.com/jamlen) and [Benjamin Lupton](https://github.com/balupton)
+* added; code documentation for `/lib/view.js` class, thanks [Talon](https://github.com/LegitTalon)
+* added; coverage report and default gulp task, thanks [James Allen](https://github.com/jamlen)
+
 ## v0.2.16 / 2014-05-14
 
 * fixed; issues with Keystone.prototype.import, see [#348](https://github.com/JedWatson/keystone/issues/348), thanks [ashleycorker](https://github.com/ashleycoker)
