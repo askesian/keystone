@@ -2,9 +2,8 @@
  * Module dependencies.
  */
 
-var util = require('util'),
-    utils = require('keystone-utils'),
-    super_ = require('../field');
+var keystone = require('../../'),
+    Field = keystone.Field;
 
 module.exports = Field.extend({
     /**

@@ -7,7 +7,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Relationship = Field.extend({
+var Relationship = Field.extend({
 	/**
 	 * Relationship FieldType Constructor
 	 * @extends Field
@@ -154,7 +154,7 @@ module.exports = Relationship = Field.extend({
 			}
 			query.where(path);
 			_.each(filters, function(value, method) {
-				if ('string' === typeof value && value.substr(0, 1) == ':') {
+				if ('string' === typeof value && value.substr(0, 1) === ':') {
 					if (!item) {
 						return;
 					}
@@ -217,3 +217,5 @@ Object.defineProperty(Relationship.prototype, 'hasFilters', {
 		return (this.filters && _.keys(this.filters).length);
 	}
 });
+
+exports = module.exports = Relationship;

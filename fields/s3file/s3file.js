@@ -12,7 +12,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = S3File = Field.extend({
+var S3File = Field.extend({
 	/**
 	 * S3File FieldType Constructor
 	 * @extends Field
@@ -207,7 +207,7 @@ module.exports = S3File = Field.extend({
 			return callback(new Error('Unsupported File Type: ' + file.type));
 		}
 
-		if ('function' == typeof update) {
+		if ('function' === typeof update) {
 			callback = update;
 			update = false;
 		}
@@ -337,7 +337,7 @@ module.exports = S3File = Field.extend({
 	 */
 
 	processFilters: function (ops, filter) {
-		ops.value = (filter[0] == 'true') ? true : false;
+		ops.value = (filter[0] === 'true') ? true : false;
 	},
 
 	getSearchFilters: function (filter, filters) {
@@ -354,3 +354,8 @@ Object.defineProperty(S3File.prototype, 's3config', {
 		return this.options.s3config || keystone.get('s3 config');
 	}
 });
+
+/*!
+ * Export class
+ */
+exports = module.exports = S3File;
