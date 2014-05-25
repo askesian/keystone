@@ -7,7 +7,7 @@ var numeral = require('numeral'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Field.extend({
+var Number = Field.extend({
 	/**
 	 * Number FieldType Constructor
 	 * @extends Field
@@ -105,3 +105,5 @@ module.exports = Field.extend({
 		}
 	}
 });
+
+exports = module.exports = Number;

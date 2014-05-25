@@ -10,7 +10,7 @@ var _ = require('underscore'),
 	utils = require('keystone-utils'),
 	Field = keystone.Field;
 
-module.exports = AzureFile = Field.extend({
+var AzureFile = Field.extend({
 
 	/**
 	 * AzureFile FieldType Constructor
@@ -48,7 +48,7 @@ module.exports = AzureFile = Field.extend({
 		this.azurefileconfig.container = this.azurefileconfig.container || 'keystone';
 
 		options.filenameFormatter = options.filenameFormatter || function(item, filename) { return filename; };
-		options.containerFormatter = options.containerFormatter || function(item, filename) { return self.azurefileconfig.container; };
+		options.containerFormatter = options.containerFormatter || function(item, filename) { return this.azurefileconfig.container; };
 
 		// Could be more pre- hooks, just upload for now
 		if (options.pre && options.pre.upload) {
@@ -254,7 +254,7 @@ module.exports = AzureFile = Field.extend({
 									};
 
 									if (update) {
-											item.set(field.path, fielData);
+											item.set(field.path, fileData);
 									}
 
 									callback(null, fileData);
@@ -303,7 +303,7 @@ module.exports = AzureFile = Field.extend({
 					}
 
 					if (req.files && req.files[paths.upload] && req.files[paths.upload].size) {
-							return field.uploadFile(item, req.files[path.upload], true, callback);
+							return field.uploadFile(item, req.files[paths.upload], true, callback);
 					}
 
 					return callback();
@@ -342,3 +342,5 @@ module.exports = AzureFile = Field.extend({
 Object.defineProperty(AzureFile.prototype, 'azurefileconfig', { get: function() {
 		return this.options.azurefileconfig || keystone.get('azurefile config');
 }});
+
+exports = module.exports = AzureFile;

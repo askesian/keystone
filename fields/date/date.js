@@ -8,7 +8,7 @@ var moment = require('moment'),
 	Field = keystone.Field;
 
 
-module.exports = Field.extend({
+var Date = Field.extend({
 	/**
 	 * Date FieldType Constructor
 	 * @extends Field
@@ -19,7 +19,7 @@ module.exports = Field.extend({
 		this._underscoreMethods = ['format', 'moment', 'parse'];
 
 		this._formatString = (options.format === false) ? false : (options.format || 'Do MMM YYYY');
-		if (this._formatString && 'string' != typeof this._formatString) {
+		if (this._formatString && 'string' !== typeof this._formatString) {
 			throw new Error('FieldType.Date: options.format must be a string.');
 		}
 
@@ -109,7 +109,7 @@ module.exports = Field.extend({
 	 */
 
 	processFilters: function (ops, filter) {
-		if (filter[0] == 'gt' || filter[0] == 'lt') {
+		if (filter[0] === 'gt' || filter[0] === 'lt') {
 			ops.operator = filter[0];
 			filter.shift();
 		}
@@ -121,9 +121,9 @@ module.exports = Field.extend({
 		if (val && val.isValid()) {
 			var start = moment(filter.value).startOf('day');
 			var end = moment(filter.value).endOf('day');
-			if (filter.operator == 'gt') {
+			if (filter.operator === 'gt') {
 				filters[filter.field.path] = { $gt: end.toDate() };
-			} else if (filter.operator == 'lt') {
+			} else if (filter.operator === 'lt') {
 				filters[filter.field.path] = { $lt: start.toDate() };
 			} else {
 				filters[filter.field.path] = { $lte: end.toDate(), $gte: start.toDate() };
@@ -131,3 +131,5 @@ module.exports = Field.extend({
 		}
 	}
 });
+
+exports = module.exports = Date;

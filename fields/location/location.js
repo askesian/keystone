@@ -53,7 +53,7 @@ function doGoogleGeocodeRequest(address, region, callback) {
 		address: address
 	};
 
-	if (arguments.length == 2 && 'function' == typeof region) {
+	if (arguments.length === 2 && 'function' === typeof region) {
 		callback = region;
 		region = null;
 	}
@@ -90,7 +90,7 @@ function doGoogleGeocodeRequest(address, region, callback) {
 }
 
 
-module.exports = Field.extend({
+var Location = Field.extend({
 	/**
 	 * Location FieldType Constructor
 	 * @extends Field
@@ -108,7 +108,7 @@ module.exports = Field.extend({
 		if (options.required) {
 			if (Array.isArray(options.required)) {
 				this.requiredPaths = options.required;
-			} else if ('string' == typeof options.required) {
+			} else if ('string' === typeof options.required) {
 				this.requiredPaths = options.required.replace(/,/g, ' ').split(/\s+/);
 			} else {
 				this.requiredPaths = ['street1', 'suburb'];
@@ -153,8 +153,7 @@ module.exports = Field.extend({
 				type: type
 			};
 			if (options.defaults[key]) {
-				def.
-				default = options.defaults[key];
+				def.default = options.defaults[key];
 			}
 			return def;
 		};
@@ -280,7 +279,7 @@ module.exports = Field.extend({
 		var paths = this.paths;
 
 		var setValue = function(key) {
-			if (paths[key] in data && data[paths[key]] != item.get(paths[key])) {
+			if (paths[key] in data && data[paths[key]] !== item.get(paths[key])) {
 				item.set(paths[key], data[paths[key]] || null);
 			}
 		};
@@ -292,11 +291,11 @@ module.exports = Field.extend({
 			var oldGeo = item.get(paths.geo) || [],
 				newGeo = data[paths.geo];
 
-			if (!Array.isArray(newGeo) || newGeo.length != 2) {
+			if (!Array.isArray(newGeo) || newGeo.length !== 2) {
 				newGeo = [];
 			}
 
-			if (newGeo[0] != oldGeo[0] || newGeo[1] != oldGeo[1]) {
+			if (newGeo[0] !== oldGeo[0] || newGeo[1] !== oldGeo[1]) {
 				item.set(paths.geo, newGeo);
 			}
 
@@ -367,7 +366,7 @@ module.exports = Field.extend({
 	 * @api private
 	 */
 	googleLookup: function(item, region, update, callback) {
-		if ('function' == typeof update) {
+		if ('function' === typeof update) {
 			callback = update;
 			update = false;
 		}
@@ -385,7 +384,7 @@ module.exports = Field.extend({
 		}
 
 		doGoogleGeocodeRequest(address, region || keystone.get('default region'), function(err, geocode) {
-			if (err || geocode.status != 'OK') {
+			if (err || geocode.status !== 'OK') {
 				return callback(err);
 			}
 
@@ -434,11 +433,11 @@ module.exports = Field.extend({
 			//console.log(result);
 			//console.log(location);
 
-			if (update == 'overwrite') {
+			if (update === 'overwrite') {
 				item.set(field.path, location);
 			} else if (update) {
 				_.each(location, function(value, key) {
-					if (key == 'geo') {
+					if (key === 'geo') {
 						return;
 					}
 					if (!stored[key]) {
@@ -507,3 +506,5 @@ module.exports = Field.extend({
 		}
 	}
 });
+
+exports = module.exports = Location;

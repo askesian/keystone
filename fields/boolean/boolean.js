@@ -6,7 +6,7 @@ var utils = require('keystone-utils'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Field.extend({
+var Boolean = Field.extend({
 	/**
 	 * Boolean FieldType Constructor
 	 * @extends Field
@@ -59,7 +59,7 @@ module.exports = Field.extend({
 	 */
 
 	processFilters: function (ops, filter) {
-		ops.value = (filter[0] == 'true') ? true : false;
+		ops.value = (filter[0] === 'true') ? true : false;
 	},
 
 	getSearchFilters: function (filter, filters) {
@@ -70,3 +70,5 @@ module.exports = Field.extend({
 		}
 	}
 });
+
+exports = module.exports = Boolean;

@@ -7,7 +7,7 @@ var utils = require('keystone-utils'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Field.extend({
+var Email = Field.extend({
 	/**
 	 * Email FieldType Constructor
 	 * @extends Field
@@ -43,11 +43,11 @@ module.exports = Field.extend({
 	updateItem: function(item, data) {
 		var newValue = data[this.path];
 
-		if ('string' == typeof newValue) {
+		if ('string' === typeof newValue) {
 			newValue = newValue.toLowerCase();
 		}
 
-		if (this.path in data && data[this.path] != item.get(this.path)) {
+		if (this.path in data && data[this.path] !== item.get(this.path)) {
 			item.set(this.path, data[this.path]);
 		}
 	},
@@ -60,7 +60,7 @@ module.exports = Field.extend({
 	gravatarUrl: function(item, size, defaultImage, rating) {
 		var value = item.get(this.path);
 
-		if ('string' != typeof value) {
+		if ('string' !== typeof value) {
 			return '';
 		}
 
@@ -83,9 +83,11 @@ module.exports = Field.extend({
 	},
 
 	getSearchFilters: function (filter, filters) {
+		var cond;
+
 		if (filter.exact) {
 			if (filter.value) {
-				var cond = new RegExp('^' + utils.escapeRegExp(filter.value) + '$', 'i');
+				cond = new RegExp('^' + utils.escapeRegExp(filter.value) + '$', 'i');
 				filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
 			} else {
 				if (filter.inv) {
@@ -95,8 +97,10 @@ module.exports = Field.extend({
 				}
 			}
 		} else if (filter.value) {
-			var cond = new RegExp(utils.escapeRegExp(filter.value), 'i');
+			cond = new RegExp(utils.escapeRegExp(filter.value), 'i');
 			filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
 		}
 	}
 });
+
+exports = module.exports = Email;

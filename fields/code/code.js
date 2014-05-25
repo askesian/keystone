@@ -14,88 +14,88 @@ function getMime(lang) {
 	var mime;
 
 	switch (lang) {
-		case "c":
-			mime = "text/x-csrc";
+		case 'c':
+			mime = 'text/x-csrc';
 			break;
-		case "c++":
-		case "objetivec":
-			mime = "text/x-c++src";
+		case 'c++':
+		case 'objetivec':
+			mime = 'text/x-c++src';
 			break;
-		case "css":
-			mime = "text/css";
+		case 'css':
+			mime = 'text/css';
 			break;
-		case "asp":
-			mime = "application/x-aspx";
+		case 'asp':
+			mime = 'application/x-aspx';
 			break;
-		case "c#":
-			mime = "text/x-csharp";
+		case 'c#':
+			mime = 'text/x-csharp';
 			break;
-		case "vb":
-			mime = "text/x-vb";
+		case 'vb':
+			mime = 'text/x-vb';
 			break;
-		case "xml":
-			mime = "text/xml";
+		case 'xml':
+			mime = 'text/xml';
 			break;
-		case "php":
-			mime = "application/x-httpd-php";
+		case 'php':
+			mime = 'application/x-httpd-php';
 			break;
-		case "html":
-			mime = "text/html";
+		case 'html':
+			mime = 'text/html';
 			break;
-		case "ini":
-			mime = "text/x-properties";
+		case 'ini':
+			mime = 'text/x-properties';
 			break;
-		case "js":
-			mime = "text/javascript";
+		case 'js':
+			mime = 'text/javascript';
 			break;
-		case "java":
-			mime = "text/x-java";
+		case 'java':
+			mime = 'text/x-java';
 			break;
-		case "coffee":
-			mime = "text/x-coffeescript";
+		case 'coffee':
+			mime = 'text/x-coffeescript';
 			break;
-		case "lisp":
-			mime = "text/x-common-lisp";
+		case 'lisp':
+			mime = 'text/x-common-lisp';
 			break;
-		case "perl":
-			mime = "text/x-perl";
+		case 'perl':
+			mime = 'text/x-perl';
 			break;
-		case "python":
-			mime = "text/x-python";
+		case 'python':
+			mime = 'text/x-python';
 			break;
-		case "sql":
-			mime = "text/x-sql";
+		case 'sql':
+			mime = 'text/x-sql';
 			break;
-		case "json":
-			mime = "application/json";
+		case 'json':
+			mime = 'application/json';
 			break;
-		case "less":
-			mime = "text/x-less";
+		case 'less':
+			mime = 'text/x-less';
 			break;
-		case "sass":
-			mime = "text/x-sass";
+		case 'sass':
+			mime = 'text/x-sass';
 			break;
-		case "sh":
-			mime = "text/x-sh";
+		case 'sh':
+			mime = 'text/x-sh';
 			break;
-		case "ruby":
-			mime = "text/x-ruby";
+		case 'ruby':
+			mime = 'text/x-ruby';
 			break;
-		case "jsp":
-			mime = "application/x-jsp";
+		case 'jsp':
+			mime = 'application/x-jsp';
 			break;
-		case "tpl":
-			mime = "text/x-smarty";
+		case 'tpl':
+			mime = 'text/x-smarty';
 			break;
-		case "jade":
-			mime = "text/x-jade";
+		case 'jade':
+			mime = 'text/x-jade';
 			break;
 	}
 
 	return mime;
 }
 
-module.exports = Field.extend({
+var Code = Field.extend({
 
 	/**
 	 * Code FieldType Constructor
@@ -111,3 +111,5 @@ module.exports = Field.extend({
 		Field.apply(this, arguments);
 	}
 });
+
+exports = module.exports = Code;

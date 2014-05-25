@@ -8,7 +8,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Field.extend({
+var Embedly = Field.extend({
 	/**
 	 * Embedly FieldType Constructor
 	 *
@@ -137,7 +137,7 @@ module.exports = Field.extend({
 						field.reset(post);
 					} else {
 						var data = objs[0];
-						if (data && data.type != 'error') {
+						if (data && data.type !==	 'error') {
 							post.set(field.path, {
 								exists: true,
 								type: data.type,
@@ -254,3 +254,5 @@ module.exports = Field.extend({
 		}));
 	}
 });
+
+exports = module.exports = Embedly;

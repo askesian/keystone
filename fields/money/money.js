@@ -7,7 +7,7 @@ var numeral = require('numeral'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Field.extend({
+var Money = Field.extend({
 	/**
 	 * Money FieldType Constructor
 	 * @extends Field
@@ -43,7 +43,7 @@ module.exports = Field.extend({
 	 *
 	 * @api public
 	 */
-	validateInput: function(data, required) {
+	validateInput: function(data, required, item) {
 		if (!(this.path in data) && item && (item.get(this.path) || item.get(this.path) === 0)) return true;
 
 		if (data[this.path]) {
@@ -105,3 +105,5 @@ module.exports = Field.extend({
 		}
 	}
 });
+
+exports = module.exports = Money;

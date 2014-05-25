@@ -8,7 +8,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Field.extend({
+var Password = Field.extend({
 	/**
 	 * password FieldType Constructor
 	 * @extends Field
@@ -112,3 +112,5 @@ module.exports = Field.extend({
 		// TODO
 	}
 });
+
+exports = module.exports = Password;

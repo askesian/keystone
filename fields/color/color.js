@@ -5,7 +5,7 @@
 var keystone = require('../../'),
     Field = keystone.Field;
 
-module.exports = Field.extend({
+var Color = Field.extend({
     /**
      * Color FieldType Constructor
      * @extends Field
@@ -18,3 +18,5 @@ module.exports = Field.extend({
         Field.apply(this, arguments);
     }
 });
+
+exports = module.exports = Color;

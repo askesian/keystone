@@ -7,7 +7,7 @@ var utils = require('keystone-utils'),
     keystone = require('../../'),
     Field = keystone.Field;
 
-module.exports = Field.extend({
+var Textarea = Field.extend({
     /**
      * Text FieldType Constructor
      * @extends Field
@@ -59,3 +59,5 @@ module.exports = Field.extend({
         }
     }
 });
+
+exports = module.exports = Textarea;

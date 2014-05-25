@@ -9,7 +9,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Field.extend({
+var CloudinaryImages = Field.extend({
 	/**
 	 * CloudinaryImages FieldType Constructor
 	 * @extends Field
@@ -147,9 +147,9 @@ module.exports = Field.extend({
 
 		this.removeImage = function(item, id, method, callback) {
 			var images = item.get(field.path);
-			if ('number' != typeof id) {
+			if ('number' !== typeof id) {
 				for (var i = 0; i < images.length; i++) {
-					if (images[i].public_id == id) {
+					if (images[i].public_id === id) {
 						id = i;
 						break;
 					}
@@ -157,12 +157,12 @@ module.exports = Field.extend({
 			}
 			var img = images[id];
 			if (!img) return;
-			if (method == 'delete') {
+			if (method === 'delete') {
 				cloudinary.uploader.destroy(img.public_id, function() {});
 			}
 			images.splice(id, 1);
 			if (callback) {
-				item.save(('function' != typeof callback) ? callback : undefined);
+				item.save(('function' !== typeof callback) ? callback : undefined);
 			}
 		};
 
@@ -287,12 +287,12 @@ module.exports = Field.extend({
 
 				var uploadOptions = {
 					tags: [tp + field.list.path + '_' + field.path, tp + field.list.path + '_' + field.path + '_' + item.id]
-				}
+				};
 
 				if (keystone.get('cloudinary prefix'))
 					uploadOptions.tags.push(keystone.get('cloudinary prefix'));
 
-				if (keystone.get('env') != 'production')
+				if (keystone.get('env') !== 'production')
 					uploadOptions.tags.push(tp + 'dev');
 
 				async.each(files, function(file, next) {
@@ -314,7 +314,7 @@ module.exports = Field.extend({
 			} else {
 				return callback();
 			}
-		}
+		};
 	},
 
 	/**
@@ -335,7 +335,7 @@ module.exports = Field.extend({
 	 */
 
 	processFilters: function (ops, filter) {
-		ops.value = (filter[0] == 'true') ? true : false;
+		ops.value = (filter[0] === 'true') ? true : false;
 	},
 
 	getSearchFilters: function (filter, filters) {
@@ -344,3 +344,5 @@ module.exports = Field.extend({
 
 
 });
+
+exports = module.exports = CloudinaryImages;

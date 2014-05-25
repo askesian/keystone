@@ -8,7 +8,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Field.extend({
+var CloudinaryImage = Field.extend({
 	/**
 	 * CloudinaryImage FieldType Constructor
 	 * @extends Field
@@ -35,7 +35,7 @@ module.exports = Field.extend({
 				'See http://keystonejs.com/docs/configuration/#cloudinary for more information.\n');
 		}
 
-		FieldBase.apply(this, arguments);
+		Field.apply(this, arguments);
 	},
 
 	/**
@@ -121,7 +121,7 @@ module.exports = Field.extend({
 
 		var exists = function(item) {
 			return (item.get(paths.public_id) ? true : false);
-		}
+		};
 
 		// The .exists virtual indicates whether an image is stored
 		schema.virtual(paths.exists).get(function() {
@@ -134,7 +134,7 @@ module.exports = Field.extend({
 				return '';
 			}
 
-			options = ('object' == typeof options) ? options : {};
+			options = ('object' === typeof options) ? options : {};
 
 			if (!('fetch_format' in options) && keystone.get('cloudinary webp') !== false) {
 				options.fetch_format = "auto";
@@ -150,7 +150,7 @@ module.exports = Field.extend({
 
 			return cloudinary.url(item.get(paths.public_id) + '.' + item.get(paths.format), options);
 
-		}
+		};
 
 		var reset = function(item) {
 			item.set(field.path, {
@@ -164,12 +164,12 @@ module.exports = Field.extend({
 				height: 0,
 				secure_url: ''
 			});
-		}
+		};
 
 		var addSize = function(options, width, height, other) {
 			if (width) options.width = width;
 			if (height) options.height = height;
-			if ('object' == typeof other) {
+			if ('object' === typeof other) {
 				_.extend(options, other);
 			}
 			return options;
@@ -251,7 +251,7 @@ module.exports = Field.extend({
 				cloudinary.uploader.destroy(this.get(paths.public_id), function() {});
 				reset(this);
 			}
-		}
+		};
 
 		_.each(schemaMethods, function(fn, key) {
 			field.underscoreMethod(key, fn);
@@ -306,12 +306,12 @@ module.exports = Field.extend({
 
 				var uploadOptions = {
 					tags: [tp + field.list.path + '_' + field.path, tp + field.list.path + '_' + field.path + '_' + item.id]
-				}
+				};
 
 				if (keystone.get('cloudinary prefix'))
 					uploadOptions.tags.push(keystone.get('cloudinary prefix'));
 
-				if (keystone.get('env') != 'production')
+				if (keystone.get('env') !== 'production')
 					uploadOptions.tags.push(tp + 'dev');
 
 				cloudinary.uploader.upload(req.files[paths.upload].path, function(result) {
@@ -327,7 +327,7 @@ module.exports = Field.extend({
 				callback();
 			}
 
-		}
+		};
 	},
 
 
@@ -349,10 +349,12 @@ module.exports = Field.extend({
 	 */
 
 	processFilters: function (ops, filter) {
-		ops.value = (filter[0] == 'true') ? true : false;
+		ops.value = (filter[0] === 'true') ? true : false;
 	},
 
 	getSearchFilters: function (filter, filters) {
 		// TODO
 	}
 });
+
+exports = module.exports = CloudinaryImage;

@@ -11,7 +11,7 @@ var fs = require('fs'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Field.extend({
+var LocalFile = Field.extend({
 
 	/**
 	 * localfile FieldType Constructor
@@ -228,7 +228,7 @@ module.exports = Field.extend({
 			return callback(new Error('Unsupported File Type: ' + file.type));
 		}
 
-		if ('function' == typeof update) {
+		if ('function' === typeof update) {
 			callback = update;
 			update = false;
 		}
@@ -326,10 +326,12 @@ module.exports = Field.extend({
 	 */
 
 	processFilters: function (ops, filter) {
-		ops.value = (filter[0] == 'true') ? true : false;
+		ops.value = (filter[0] === 'true') ? true : false;
 	},
 
 	getSearchFilters: function (filter, filters) {
 		// TODO
 	}
 });
+
+exports = module.exports = LocalFile;

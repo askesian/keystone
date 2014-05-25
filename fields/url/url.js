@@ -7,7 +7,7 @@ var utils = require('keystone-utils'),
     keystone = require('../../'),
     Field = keystone.Field;
 
-module.exports = Field.extend({
+var Url = Field.extend({
     /**
      * URL FieldType Constructor
      * @extends Field
@@ -53,3 +53,5 @@ module.exports = Field.extend({
     // TODO: Proper url validation
 
 });
+
+exports = module.exports = Url;

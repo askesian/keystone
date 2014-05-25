@@ -8,7 +8,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Field.extend({
+var Markdown = Field.extend({
 	/**
 	 * Markdown FieldType Constructor
 	 * @extends Field
@@ -40,11 +40,11 @@ module.exports = Field.extend({
 
 		var setMarkdown = function(value) {
 
-			if (value == this.get(paths.md)) {
+			if (value === this.get(paths.md)) {
 				return value;
 			}
 
-			if (typeof value == 'string') {
+			if (typeof value === 'string') {
 				this.set(paths.html, marked(value));
 				return value;
 			} else {
@@ -115,9 +115,11 @@ module.exports = Field.extend({
 	},
 
 	getSearchFilters: function (filter, filters) {
+		var cond;
+
 		if (filter.exact) {
 			if (filter.value) {
-				var cond = new RegExp('^' + utils.escapeRegExp(filter.value) + '$', 'i');
+				cond = new RegExp('^' + utils.escapeRegExp(filter.value) + '$', 'i');
 				filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
 			} else {
 				if (filter.inv) {
@@ -127,8 +129,10 @@ module.exports = Field.extend({
 				}
 			}
 		} else if (filter.value) {
-			var cond = new RegExp(utils.escapeRegExp(filter.value), 'i');
+			cond = new RegExp(utils.escapeRegExp(filter.value), 'i');
 			filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
 		}
 	}
 });
+
+exports = module.exports = Markdown;

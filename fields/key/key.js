@@ -6,7 +6,7 @@ var utils = require('keystone-utils'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-module.exports = Field.extend({
+var Key = Field.extend({
 	/**
 	 * Key FieldType Constructor
 	 * @extends Field
@@ -51,15 +51,17 @@ module.exports = Field.extend({
 
 		var newValue = this.generateKey(data[this.path]);
 
-		if (item.get(this.path) != newValue) {
+		if (item.get(this.path) !== newValue) {
 			item.set(this.path, newValue);
 		}
 	},
 
 	getSearchFilters: function (filter, filters) {
+		var cond;
+
 		if (filter.exact) {
 			if (filter.value) {
-				var cond = new RegExp('^' + utils.escapeRegExp(filter.value) + '$', 'i');
+				cond = new RegExp('^' + utils.escapeRegExp(filter.value) + '$', 'i');
 				filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
 			} else {
 				if (filter.inv) {
@@ -69,8 +71,10 @@ module.exports = Field.extend({
 				}
 			}
 		} else if (filter.value) {
-			var cond = new RegExp(utils.escapeRegExp(filter.value), 'i');
+			cond = new RegExp(utils.escapeRegExp(filter.value), 'i');
 			filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
 		}
 	}
 });
+
+exports = module.exports = Key;
