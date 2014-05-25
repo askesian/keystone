@@ -34,8 +34,6 @@ var CloudinaryImage = Field.extend({
 				'CloudinaryImage fields (' + list.key + '.' + this.path + ') require the "cloudinary config" option to be set.\n\n' +
 				'See http://keystonejs.com/docs/configuration/#cloudinary for more information.\n');
 		}
-
-		Field.apply(this, arguments);
 	},
 
 	/**
