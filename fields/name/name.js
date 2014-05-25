@@ -3,7 +3,6 @@
  */
 
 var _ = require('underscore'),
-	utils = require('keystone-utils'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
@@ -14,6 +13,7 @@ var Name = Field.extend({
 	 * @api public
 	 */
 	constructor: function(list, path, options) {
+		this._nativeType = String;
 		options.nofilter = true;
 
 		Field.apply(this, arguments);
