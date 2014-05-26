@@ -6,7 +6,7 @@ var utils = require('keystone-utils'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-var Key = Field.extend({
+module.exports = Field.extend({
 	/**
 	 * Key FieldType Constructor
 	 * @extends Field
@@ -76,5 +76,3 @@ var Key = Field.extend({
 		}
 	}
 });
-
-exports = module.exports = Key;

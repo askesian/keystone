@@ -7,7 +7,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-var Relationship = Field.extend({
+module.exports = Relationship = Field.extend({
 	/**
 	 * Relationship FieldType Constructor
 	 * @extends Field
@@ -217,5 +217,3 @@ Object.defineProperty(Relationship.prototype, 'hasFilters', {
 		return (this.filters && _.keys(this.filters).length);
 	}
 });
-
-exports = module.exports = Relationship;

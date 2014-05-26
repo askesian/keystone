@@ -8,7 +8,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-var Select = Field.extend({
+module.exports = Field.extend({
 	/**
 	 * Select FieldType Constructor
 	 * @extends Field
@@ -154,5 +154,3 @@ var Select = Field.extend({
 		}
 	}
 });
-
-exports = module.exports = Select;

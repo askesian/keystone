@@ -6,13 +6,14 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-var Name = Field.extend({
+module.exports = Field.extend({
 	/**
 	 * Name FieldType Constructor
 	 * @extends Field
 	 * @api public
 	 */
 	constructor: function(list, path, options) {
+		console.log(list);
 		this._nativeType = String;
 		options.nofilter = true;
 
@@ -125,5 +126,3 @@ var Name = Field.extend({
 		// TODO
 	}
 });
-
-exports = module.exports = Name;

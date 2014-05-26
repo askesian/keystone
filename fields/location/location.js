@@ -90,7 +90,7 @@ function doGoogleGeocodeRequest(address, region, callback) {
 }
 
 
-var Location = Field.extend({
+module.exports = Field.extend({
 	/**
 	 * Location FieldType Constructor
 	 * @extends Field
@@ -506,5 +506,3 @@ var Location = Field.extend({
 		}
 	}
 });
-
-exports = module.exports = Location;

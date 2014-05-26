@@ -9,7 +9,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-var CloudinaryImages = Field.extend({
+module.exports = Field.extend({
 	/**
 	 * CloudinaryImages FieldType Constructor
 	 * @extends Field
@@ -344,5 +344,3 @@ var CloudinaryImages = Field.extend({
 
 
 });
-
-exports = module.exports = CloudinaryImages;

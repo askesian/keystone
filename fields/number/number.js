@@ -7,18 +7,18 @@ var numeral = require('numeral'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-var Money = Field.extend({
+module.exports = Field.extend({
 	/**
-	 * Money FieldType Constructor
+	 * Number FieldType Constructor
 	 * @extends Field
 	 * @api public
 	 */
 	constructor: function(list, path, options) {
 		this._nativeType = Number;
 		this._underscoreMethods = ['format'];
-		this._formatString = (options.format === false) ? false : (options.format || '$0,0.00');
+		this._formatString = (options.format === false) ? false : (options.format || '0,0[.][000000000000]');
 		if (this._formatString && 'string' !== typeof this._formatString) {
-			throw new Error('FieldType.Money: options.format must be a string.');
+			throw new Error('FieldType.Number: options.format must be a string.');
 		}
 		Field.apply(this, arguments);
 	},
@@ -105,5 +105,3 @@ var Money = Field.extend({
 		}
 	}
 });
-
-exports = module.exports = Money;

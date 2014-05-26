@@ -1,34 +1,27 @@
 /*!
  * Module dependencies.
  */
-'use strict';
 
 var utils = require('keystone-utils'),
     keystone = require('../../'),
     Field = keystone.Field;
 
-var Url = Field.extend({
+module.exports = Field.extend({
     /**
-     * URL FieldType Constructor
+     * HTML FieldType Constructor
      * @extends Field
      * @api public
      */
     constructor: function(list, path, options) {
         this._nativeType = String;
-        this._underscoreMethods = ['format'];
+
+        // TODO: implement filtering, usage disabled for now
+        options.nofilter = true;
+
+        this.wysiwyg = (options.wysiwyg) ? true : false;
+        this.height = options.height || 180;
 
         Field.apply(this, arguments);
-    },
-
-    /**
-     * Formats the field value
-     *
-     * Strips the leading protocol from the value for simpler display
-     *
-     * @api public
-     */
-    format: function(item, format) {
-        return (item.get(this.path) || '').replace(/^[a-zA-Z]\:\/\//, '');
     },
 
     getSearchFilters: function (filter, filters) {
@@ -50,8 +43,4 @@ var Url = Field.extend({
             filters[filter.field.path] = filter.inv ? { $not: cond } : cond;
         }
     }
-    // TODO: Proper url validation
-
 });
-
-exports = module.exports = Url;

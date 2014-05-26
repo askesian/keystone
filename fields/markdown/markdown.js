@@ -8,7 +8,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-var Markdown = Field.extend({
+module.exports = Field.extend({
 	/**
 	 * Markdown FieldType Constructor
 	 * @extends Field
@@ -134,5 +134,3 @@ var Markdown = Field.extend({
 		}
 	}
 });
-
-exports = module.exports = Markdown;

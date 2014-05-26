@@ -2,11 +2,10 @@
  * Module dependencies.
  */
 
-var utils = require('keystone-utils'),
-	keystone = require('../../'),
+var keystone = require('../../'),
 	Field = keystone.Field;
 
-var Boolean = Field.extend({
+module.exports = Field.extend({
 	/**
 	 * Boolean FieldType Constructor
 	 * @extends Field
@@ -70,5 +69,3 @@ var Boolean = Field.extend({
 		}
 	}
 });
-
-exports = module.exports = Boolean;

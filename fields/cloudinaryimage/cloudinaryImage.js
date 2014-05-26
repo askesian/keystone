@@ -3,12 +3,13 @@
  */
 
 var _ = require('underscore'),
+	util = require('util'),
 	cloudinary = require('cloudinary'),
 	utils = require('keystone-utils'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-var CloudinaryImage = Field.extend({
+module.exports = Field.extend({
 	/**
 	 * CloudinaryImage FieldType Constructor
 	 * @extends Field
@@ -135,7 +136,7 @@ var CloudinaryImage = Field.extend({
 			options = ('object' === typeof options) ? options : {};
 
 			if (!('fetch_format' in options) && keystone.get('cloudinary webp') !== false) {
-				options.fetch_format = "auto";
+				options.fetch_format = 'auto';
 			}
 
 			if (!('progressive' in options) && keystone.get('cloudinary progressive') !== false) {
@@ -354,5 +355,3 @@ var CloudinaryImage = Field.extend({
 		// TODO
 	}
 });
-
-exports = module.exports = CloudinaryImage;

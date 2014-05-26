@@ -7,7 +7,7 @@ var utils = require('keystone-utils'),
     keystone = require('../../'),
     Field = keystone.Field;
 
-var Text = Field.extend({
+module.exports = Field.extend({
     /**
      * Text FieldType Constructor
      * @extends Field
@@ -15,9 +15,19 @@ var Text = Field.extend({
      */
     constructor: function(list, path, options) {
         this._nativeType = String;
-        this._underscoreMethods = ['crop'];
+        this._underscoreMethods = ['format', 'crop'];
+        this.height = options.height || 90;
 
         Field.apply(this, arguments);
+    },
+
+    /**
+     * Formats the field value
+     *
+     * @api public
+     */
+    format: function(item) {
+        return utils.textToHTML(item.get(this.path));
     },
 
     /**
@@ -49,5 +59,3 @@ var Text = Field.extend({
         }
     }
 });
-
-exports = module.exports = Text;

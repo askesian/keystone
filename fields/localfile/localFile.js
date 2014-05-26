@@ -11,7 +11,7 @@ var fs = require('fs'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-var LocalFile = Field.extend({
+module.exports = Field.extend({
 
 	/**
 	 * localfile FieldType Constructor
@@ -333,5 +333,3 @@ var LocalFile = Field.extend({
 		// TODO
 	}
 });
-
-exports = module.exports = LocalFile;

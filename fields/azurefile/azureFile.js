@@ -10,7 +10,7 @@ var _ = require('underscore'),
 	utils = require('keystone-utils'),
 	Field = keystone.Field;
 
-var AzureFile = Field.extend({
+module.exports = AzureFile = Field.extend({
 
 	/**
 	 * AzureFile FieldType Constructor
@@ -342,5 +342,3 @@ var AzureFile = Field.extend({
 Object.defineProperty(AzureFile.prototype, 'azurefileconfig', { get: function() {
 		return this.options.azurefileconfig || keystone.get('azurefile config');
 }});
-
-exports = module.exports = AzureFile;

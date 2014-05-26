@@ -2,37 +2,27 @@
  * Module dependencies.
  */
 
-var _ = require('underscore'),
-	moment = require('moment'),
-	utils = require('keystone-utils'),
+var moment = require('moment'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-var parseFormats = ['YYYY-MM-DD', 'YYYY-MM-DD h:m:s a', 'YYYY-MM-DD h:m a', 'YYYY-MM-DD H:m:s', 'YYYY-MM-DD H:m'];
 
-
-var DateTime = Field.extend({
+module.exports = Field.extend({
 	/**
-	 * DateTime FieldType Constructor
+	 * Date FieldType Constructor
 	 * @extends Field
 	 * @api public
 	 */
 	constructor: function(list, path, options) {
 		this._nativeType = Date;
 		this._underscoreMethods = ['format', 'moment', 'parse'];
-		this.typeDescription = 'date and time';
 
-		this._formatString = (options.format === false) ? false : (options.format || 'Do MMM YYYY hh:mm:ss a');
+		this._formatString = (options.format === false) ? false : (options.format || 'Do MMM YYYY');
 		if (this._formatString && 'string' !== typeof this._formatString) {
-			throw new Error('FieldType.DateTime: options.format must be a string.');
+			throw new Error('FieldType.Date: options.format must be a string.');
 		}
 
 		Field.apply(this, arguments);
-
-		this.paths = {
-			date: this._path.append('_date'),
-			time: this._path.append('_time')
-		};
 	},
 
 	/**
@@ -69,19 +59,6 @@ var DateTime = Field.extend({
 	},
 
 	/**
-	 * Get the value from a data object; may be simple or a pair of fields
-	 *
-	 * @api private
-	 */
-	getInputFromData: function(data) {
-		if (this.paths.date in data && this.paths.time in data) {
-			return (data[this.paths.date] + ' ' + data[this.paths.time]).trim();
-		} else {
-			return data[this.path];
-		}
-	},
-
-	/**
 	 * Checks that a valid date has been provided in a data object
 	 *
 	 * An empty value clears the stored value and is considered valid
@@ -89,13 +66,13 @@ var DateTime = Field.extend({
 	 * @api public
 	 */
 	validateInput: function(data, required, item) {
-		if (!(this.path in data && !(this.paths.date in data && this.paths.time in data)) && item && item.get(this.path)) return true;
+		if (!(this.path in data) && item && item.get(this.path)) return true;
 
-		var newValue = moment(this.getInputFromData(data), parseFormats);
+		var newValue = moment(data[this.path]);
 
 		if (required && (!newValue || !newValue.isValid())) {
 			return false;
-		} else if (this.getInputFromData(data) && newValue && !newValue.isValid()) {
+		} else if (data[this.path] && newValue && !newValue.isValid()) {
 			return false;
 		} else {
 			return true;
@@ -108,10 +85,10 @@ var DateTime = Field.extend({
 	 * @api public
 	 */
 	updateItem: function(item, data) {
-		if (!(item.path in data || (this.paths.date in data && this.paths.time in data)))
+		if (!(this.path in data))
 			return;
 
-		var newValue = moment(this.getInputFromData(data), parseFormats);
+		var newValue = moment(data[this.path]);
 
 		if (newValue && newValue.isValid()) {
 			if (!item.get(this.path) || !newValue.isSame(item.get(this.path))) {
@@ -153,5 +130,3 @@ var DateTime = Field.extend({
 		}
 	}
 });
-
-exports = module.exports = DateTime;

@@ -95,7 +95,7 @@ function getMime(lang) {
 	return mime;
 }
 
-var Code = Field.extend({
+module.exports = Field.extend({
 
 	/**
 	 * Code FieldType Constructor
@@ -111,5 +111,3 @@ var Code = Field.extend({
 		Field.apply(this, arguments);
 	}
 });
-
-exports = module.exports = Code;

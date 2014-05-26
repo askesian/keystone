@@ -1,8 +1,6 @@
 /*!
  * Module dependencies.
  */
-'use strict';
-
 var _ = require('underscore'),
 	moment = require('moment'),
 	async = require('async'),
@@ -12,7 +10,7 @@ var _ = require('underscore'),
 	keystone = require('../../'),
 	Field = keystone.Field;
 
-var S3File = Field.extend({
+module.exports = S3File = Field.extend({
 	/**
 	 * S3File FieldType Constructor
 	 * @extends Field
@@ -354,8 +352,3 @@ Object.defineProperty(S3File.prototype, 's3config', {
 		return this.options.s3config || keystone.get('s3 config');
 	}
 });
-
-/*!
- * Export class
- */
-exports = module.exports = S3File;
