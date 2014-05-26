@@ -51,6 +51,7 @@ var Keystone = function() {
 		routes: [],
 		render: []
 	};
+	this.pathFor = require('./lib/pathFor');
 	this._redirects = {};
 
 	// expose express
@@ -484,6 +485,9 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 		app.locals.pretty = true;
 	}
 
+	// named routes support
+	app.locals.pathFor = this.pathFor;
+
 	// Serve static assets
 
 	if (this.get('compress')) {
@@ -690,7 +694,9 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 
 	// Configure application routes
 	if ('function' === typeof this.get('routes')) {
-		this.get('routes')(app);
+			this.pathFor.mock(app);
+			this.get('routes')(app);
+			this.pathFor.unmock(app);
 	}
 
 	// Connect to database
