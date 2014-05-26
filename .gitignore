@@ -28,3 +28,4 @@ node_modules/
 docs/_dist
 coverage.html
 .cover*
+*.sublime-workspace
