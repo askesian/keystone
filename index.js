@@ -668,7 +668,7 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 	// Handle 404 (no route matched) errors
 
 	var default404Handler = function(req, res, next) {
-		res.status(404).send(keystone.wrapHTMLError("Sorry, no page could be found at this address (404)"));
+		res.status(404).send(keystone.wrapHTMLError('Sorry, no page could be found at this address (404)'));
 	};
 
 	app.use(function(req, res, next) {
@@ -1010,7 +1010,8 @@ Keystone.prototype.start = function(events) {
 				console.log('Connection reset by peer');
 				console.log(e);
 			} */else {
-				throw (e);
+				console.log(e.stack || e);
+				process.exit(1);
 			}
 		});
 
