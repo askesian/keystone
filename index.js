@@ -45,7 +45,8 @@ var Keystone = function() {
 		'compress': true,
 		'headless': false,
 		'logger': 'dev',
-		'auto update': false
+		'auto update': false,
+		'model prefix': null
 	};
 	this._pre = {
 		routes: [],
@@ -272,6 +273,17 @@ Keystone.prototype.connect = function() {
 	return this;
 };
 
+Keystone.prototype.prefixModel = function( key ) {
+
+	var modelPrefix = this.get('model prefix');
+
+	if( modelPrefix ) {
+		key = modelPrefix + '_' + key;
+	}
+
+	return require('mongoose/libs/utils').toCollectionName(key);
+};
+
 
 /**
  * The exports object is an instance of Keystone.
@@ -433,6 +445,54 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 		throw new Error("KeystoneJS Initialisaton Error:\n\napp must be initialised. Call keystone.init() or keystone.connect(new Express()) first.\n\n");
 	}
 
+	var keystone = this,
+		app = this.app;
+
+	// this.nativeApp indicates keystone has been mounted natively
+	// (not as part of a custom middleware stack)
+	this.nativeApp = true;
+
+	// Initialise the mongo connection url
+
+	if (!this.get('mongo')) {
+		var dbName = this.get('db name') || utils.slug(this.get('name'));
+		var dbUrl = process.env.MONGO_URI || process.env.MONGO_URL || process.env.MONGOLAB_URI || process.env.MONGOLAB_URL || (process.env.OPENSHIFT_MONGODB_DB_URL || 'mongodb://localhost/') + dbName;
+		this.set('mongo', dbUrl);
+	}
+
+	// Initialise and validate session options
+
+	if (!this.get('cookie secret')) {
+		console.error('\nKeystoneJS Configuration Error:\n\nPlease provide a `cookie secret` value for session encryption.\n');
+		process.exit(1);
+	}
+
+	var sessionOptions = keystone.get('session options');
+
+	if (!_.isObject(sessionOptions)) {
+		sessionOptions = {};
+	}
+
+	if (!sessionOptions.key) {
+		sessionOptions.key = 'keystone.sid';
+	}
+
+	sessionOptions.cookieParser = express.cookieParser(this.get('cookie secret'));
+
+	if (this.get('session store') == 'mongo') {
+		var MongoStore = require('connect-mongo')(express);
+		sessionOptions.store = new MongoStore({
+			url: this.get('mongo'),
+			collection: 'app_sessions'
+		});
+	}
+
+	// expose initialised session options
+
+	this.set('session options', sessionOptions);
+
+	// wrangle arguments
+
 	if (arguments.length === 1) {
 		events = arguments[0];
 		mountPath = null;
@@ -443,11 +503,6 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 	}
 
 	if (!events) events = {};
-
-	this.nativeApp = true;
-
-	var keystone = this,
-		app = this.app;
 
 	/* Express sub-app mounting to external app at a mount point (if specified) */
 
@@ -481,6 +536,7 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 	}
 
 	if (this.get('env') !== 'production') {
+		app.set('view cache', this.get('view cache') === undefined ? true : this.get('view cache'));
 		app.locals.pretty = true;
 	}
 
@@ -495,7 +551,31 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 	}
 
 	if (this.get('less')) {
-		app.use(require('less-middleware')({ src: this.getPath('less') }));
+		app.use(require('less-middleware')({
+			src: this.getPath('less')
+		}));
+	}
+
+	if (this.get('sass')) {
+		try {
+			var sass = require('node-sass');
+		} catch(e) {
+			if (e.code == 'MODULE_NOT_FOUND') {
+				console.error(
+					'\nERROR: node-sass not found.\n' +
+					'\nPlease install the node-sass from npm to use the `sass` option.' +
+					'\nYou can do this by running "npm install node-sass --save".\n'
+				);
+				process.exit(1);
+			} else {
+				throw e;
+			}
+		}
+		app.use(sass.middleware({
+			src: this.getPath('sass'),
+			dest: this.getPath('sass'),
+			outputStyle: (this.get('env') == 'production') ? 'compressed' : 'nested'
+		}));
 	}
 
 	if (this.get('static')) {
@@ -512,17 +592,14 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 		app.use(express.logger(this.get('logger')));
 	}
 
-	app.use(express.bodyParser());
-	app.use(express.methodOverride());
-
-	if (this.get('cookie secret')) {
-		app.use(express.cookieParser(this.get('cookie secret')));
+	if (this.get('file limit')) {
+		app.use(express.limit(this.get('file limit')));
 	}
 
-	app.use(express.session({
-		key: 'keystone.sid'
-	}));
-
+	app.use(express.bodyParser());
+	app.use(express.methodOverride());
+	app.use(sessionOptions.cookieParser);
+	app.use(express.session(sessionOptions));
 	app.use(require('connect-flash')());
 
 	if (this.get('session') === true) {
@@ -545,7 +622,7 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 		if (!app.get('trust proxy')) {
 			throw new Error("KeystoneJS Initialisaton Error:\n\nto set IP range restrictions the 'trust proxy' setting must be enabled.\n\n");
 		}
-		var ipRangeMiddleware = require('./lib/security').ipRangeRestrict(
+		var ipRangeMiddleware = require('./lib/security/ipRangeRestrict')(
 			this.get('allowed ip ranges'),
 			keystone.wrapHTMLError
 		);
@@ -631,11 +708,10 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 		if (keystone.get('logger')) {
 			if (err instanceof Error) {
 				console.log((err.type ? err.type + ' ' : '') + 'Error thrown for request: ' + req.url);
-				console.log(err.message);
 			} else {
 				console.log('Error thrown for request: ' + req.url);
-				console.log(err);
 			}
+			console.log(err.stack || err);
 		}
 
 		var msg = '';
@@ -695,15 +771,9 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 
 	// Connect to database
 
-	var mongooseArgs = this.get('mongo'),
-		mongoConnectionOpen = false;
+	var mongoConnectionOpen = false;
 
-	if (!mongooseArgs) {
-		mongooseArgs = process.env.MONGO_URI || process.env.MONGO_URL || process.env.MONGOLAB_URI || process.env.MONGOLAB_URL || ['localhost', utils.slug(this.get('name'))];
-	}
-
-	this.mongoose.connect.apply(this.mongoose, Array.isArray(mongooseArgs) ? mongooseArgs : [mongooseArgs]);
-
+	this.mongoose.connect(this.get('mongo'));
 	this.mongoose.connection.on('error', function(err) {
 
 		if (keystone.get('logger')) {
@@ -720,7 +790,7 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 
 	}).on('open', function() {
 
-		//app is mounted and db connection acquired, time to update and then call back
+		// app is mounted and db connection acquired, time to update and then call back
 
 		// Apply updates?
 		if (keystone.get('auto update')) {
