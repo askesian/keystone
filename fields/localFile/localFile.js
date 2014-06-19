@@ -234,6 +234,10 @@ module.exports = Field.extend({
 		}
 
 		var doMove = function(callback) {
+			if(field.options.filename && 'function' === typeof field.options.filename) {
+ 				name = field.options.filename(item, name);
+ 			}
+
 			fs.rename(file.path, path.join(field.options.dest, name), function(err) {
 				if (err) return callback(err);
 
