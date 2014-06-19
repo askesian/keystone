@@ -1,11 +1,11 @@
-/*global jQuery, moment, _, Keystone, alert, confirm */
+/*global jQuery, moment, _, Keystone, alert, confirm, require */
 jQuery(function($) {
-	
+	var queryfilterlib = require('queryfilter');
 	// Cache items
 	var $filters = $('#list-filters');
-	
+
 	/** Create Item */
-	
+
 	$('.btn-create-item').click(function(){
 		var $form = $(this).closest('form');
 		$form.find('.form').show();
@@ -13,24 +13,24 @@ jQuery(function($) {
 		$form.find('.toolbar-create').show();
 		$form.find('input[type=text]').first().focus();
 	});
-	
+
 	// Autofocus the search field if there has been a search
-	
+
 	if ($('.search-list input').val()) {
 		setTimeout(function() {
 			$('.search-list input').focus();
 		},10);
 	}
-	
+
 	$('.btn-cancel-create-item').click(function() {
 		var $form = $(this).closest('form');
 		$form.find('.form').hide();
 		$form.find('.toolbar-default').show();
 		$form.find('.toolbar-create').hide();
 	});
-	
+
 	/** Columns */
-	
+
 	$('.btn-toggle-column').click(function() {
 		var key = $(this).data('col');
 		if (_.contains(Keystone.list.cols, key)) {
@@ -40,9 +40,9 @@ jQuery(function($) {
 			$.addSearchParam({ cols: Keystone.list.cols.join(',') }, true);
 		}
 	});
-	
+
 	/** Filtering */
-	
+
 	var checkFiltersStatus = function() {
 		var enabledFilters = $('.filter.active'),
 			enabledPaths = _.map(enabledFilters, function(i) { return $(i).data('path'); });
@@ -52,9 +52,9 @@ jQuery(function($) {
 			$(this).parent()[_.contains(enabledPaths, path) ? 'addClass' : 'removeClass']('disabled');
 		});
 	};
-	
+
 	checkFiltersStatus();
-	
+
 	$('.add-list-filter').click(function() {
 		var path = $(this).data('path');
 		var $filter = $('.filter[data-path="' + path + '"]').addClass('active');
@@ -66,7 +66,7 @@ jQuery(function($) {
 			catch(e) {}
 		}
 	});
-	
+
 	// Handle switching between number types
 	// If the option selected is between, then show the between range inputs
 	// otherwise show the standard input field
@@ -85,16 +85,16 @@ jQuery(function($) {
 	});
 	// Ensure that the correct fields are shown initially
 	$filters.find('.filter .btn-group-operator .btn.active :radio').trigger('change');
-	
-	
+
+
 	$('.clear-filter').click(function() {
 		$(this).closest('.filter').removeClass('active');
 		checkFiltersStatus();
 	});
-	
+
 	var parseValueWithType = function(type, value){
 		var result = null;
-		
+
 		switch (type) {
 			case 'number':
 			case 'money':
@@ -103,7 +103,7 @@ jQuery(function($) {
 					result = value;
 				}
 				break;
-			
+
 			case 'date':
 			case 'datetime':
 				value = moment(value);
@@ -111,51 +111,44 @@ jQuery(function($) {
 					result = value.format('YYYY-MM-DD');
 				}
 				break;
-		
+
 			default:
 				result = value;
 				break;
 		}
-		
+
 		return result;
 	};
-	
+
 	$filters.submit(function(e) {
-		
+
 		e.preventDefault();
-		
+
 		var filterQueryString = [],
 			search = $(this).find('#list-search').val(),
 			cancelled = false;
-		
+
 		$(this).find('.filter.active').each(function() {
-			
+
 			var $filter = $(this),
 				$ops = $filter.find('.btn.active[data-opt]'), // active options
 				data = {
 					type: $filter.data('type'),
 					path: $filter.data('path')
 				},
-				queryParts = [data.path],
+				queryFilter = queryfilterlib.QueryFilter.create(),
 				value;
-			
+
 			$ops.each(function() {
-				// console.log(data.type + ': ' + data.path + ': ' + $(this).data('opt') + ': ' + $(this).data('value'));
 				data[$(this).data('opt')] = $(this).data('value');
 			});
-			
-			if (data.inv) {
-				queryParts.push('!');
-			}
-			
-			if (data.exact) {
-				queryParts.push('=');
-			}
-			
-			if (data.operator) {
-				queryParts.push(data.operator);
-			}
-			
+
+			queryFilter.type = data.type;
+ 			queryFilter.key = data.path;
+ 			queryFilter.inverse = data.inv;
+ 			queryFilter.exact = data.exact;
+ 			queryFilter.operator = data.operator;
+
 			if ( data.operator === 'bt' ) {
 				value = [
 					parseValueWithType(data.type, $filter.find('input.filter-input-range1').val()),
@@ -166,7 +159,7 @@ jQuery(function($) {
 					cancelled = true;
 					return false;
 				}
-				queryParts.push(value[0], value[1]);
+				queryFilter.value = value;
 			}
 			else {
 				switch (data.type) {
@@ -182,49 +175,51 @@ jQuery(function($) {
 					case 'datetime':
 					case 'select':
 						if ( value = parseValueWithType(data.type, $filter.find('input[name=value]').val()) ) {
-							queryParts.push(value);
+							queryFilter.value = value;
 						}
 						break;
-					
+
 					case 'location':
-						var locationParts = [];
+						value = [];
 						$filter.find('input[type=text]').each(function() {
-							locationParts.push($(this).val());
+							value.push($(this).val());
 						});
-						queryParts.push.apply(queryParts, locationParts);
+						queryFilter.value = value;
 						break;
-					
+
 					case 'boolean':
 					case 'cloudinaryimage':
 					case 'cloudinaryimages':
 					case 's3file':
 						if ( data.value ) { // where is this defined???
-							queryParts.push(value);
+							queryFilter.value = value;
 						}
 						break;
-					
+
 					case 'relationship':
 						if ( value = parseValueWithType(data.type, $filter.find('input[type=hidden]').val()) ) {
-							queryParts.push(value);
+							queryFilter.value = value;
 						}
 						break;
 				}
 			}
-			
-			filterQueryString.push(queryParts.join(':'));
+
+			if ( queryFilter.value != null ) {
+ 				filterQueryString.push(queryFilter.toString());
+ 			}
 		});
-		
+
 		if ( cancelled === false ) {
 			$.addSearchParam({
 				search: search || undefined,
 				q: filterQueryString.join(';') || undefined
 			}, true);
 		}
-	
+
 	});
-	
+
 	/** List Controls */
-	
+
 	$('a.control-delete').hover(function() {
 		$(this).closest('tr').addClass('delete-hover');
 	}, function() {
@@ -260,11 +255,11 @@ jQuery(function($) {
 			}
 		}).error(onError);
 	});
-	
+
 	$('a.control-sort').hover(function() {
 		$(this).closest('tr').addClass('sort-hover');
 	}, function() {
 		$(this).closest('tr').removeClass('sort-hover');
 	});
-	
+
 });
