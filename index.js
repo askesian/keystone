@@ -63,8 +63,8 @@ var Keystone = function() {
 
 	this.set('env', process.env.NODE_ENV || 'development');
 
-	this.set('port', process.env.PORT);
-	this.set('host', process.env.HOST || process.env.IP);
+	this.set('port', process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT);
+ 	this.set('host', process.env.HOST || process.env.IP || process.env.OPENSHIFT_NODEJS_IP);
 	this.set('listen', process.env.LISTEN);
 
 	this.set('ssl', process.env.SSL);
@@ -130,7 +130,7 @@ var remappedOptions = {
 
 	if (remappedOptions[key]) {
 		if (this.get('logger')) {
-			console.log('Warning: the `' + key + '` option has been deprecated. Please use `' + remappedOptions[key] + '` instead.\n\n' +
+			console.log('\nWarning: the `' + key + '` option has been deprecated. Please use `' + remappedOptions[key] + '` instead.\n\n' +
 				'Support for `' + key + '` will be removed in a future version.');
 		}
 		key = remappedOptions[key];
@@ -157,6 +157,18 @@ var remappedOptions = {
 		case 'nav':
 			this.nav = this.initNav(value);
 			break;
+		case 'mongo':
+ 			if ('string' !== typeof value) {
+ 				if (Array.isArray(value) && (value.length === 2 || value.length === 3)) {
+ 					console.log('\nWarning: using an array for the `mongo` option has been deprecated.\nPlease use a mongodb connection string, e.g. mongodb://localhost/db_name instead.\n\n' +
+ 						'Support for arrays as the `mongo` setting will be removed in a future version.');
+ 					value = (value.length === 2) ? 'mongodb://' + value[0] + '/' + value[1] : 'mongodb://' + value[0] + ':' + value[2] + '/' + value[1];
+ 				} else {
+ 					console.error('\nInvalid Configuration:\nThe `mongo` option must be a mongodb connection string, e.g. mongodb://localhost/db_name\n');
+ 					process.exit(1);
+ 				}
+ 			}
+ 			break;
 	}
 
 	this._options[key] = value;
@@ -479,6 +491,7 @@ Keystone.prototype.mount = function(mountPath, parentApp, events) {
 
 	sessionOptions.cookieParser = express.cookieParser(this.get('cookie secret'));
 
+	// Set 'session store': 'mongo' in your keystone options to enable connect-mongo.
 	if (this.get('session store') == 'mongo') {
 		var MongoStore = require('connect-mongo')(express);
 		sessionOptions.store = new MongoStore({
