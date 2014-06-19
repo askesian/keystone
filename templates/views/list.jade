@@ -18,7 +18,6 @@ block js
 		script(src='/keystone/js/lib/tinymce/jquery.tinymce.min.js')
 		script(src="/keystone/js/common/ui-wysiwyg.js")
 	script(src='/keystone/js/views/list.js')
-	script(src='//wzrd.in/bundle/queryfilter@latest')
 	script.
 		Keystone.list = { path: "#{list.path}", label: "#{list.label}", singular: "#{list.singular}", plural: "#{list.plural}", cols: !{JSON.stringify(colPaths)} };
 		Keystone.wysiwyg = { options: !{JSON.stringify(wysiwygOptions)} };
@@ -163,6 +162,13 @@ block content
 										span(class='fieldicon fieldicon-' + el.field.type)
 										span= el.field.label
 
+					.col-xs-4.col-sm-2
+						.dropdown.list-filter-dropdown.dropdown-recent
+							a(href=js, data-toggle='dropdown').btn.btn-default.dropdown-toggle
+								| Recent Searches...
+								b.caret
+							ul.dropdown-menu
+
 					//- lg screens only
 					//- columns and download aren't relevant when using a mobile device
 					.col-sm-4.hidden-xs: .pull-right
@@ -265,11 +271,11 @@ block content
 								//- Location
 								if field.type == 'location'
 									- ops.value = ops.value || []
- 									.filter-input.filter-input-md: input(type='text', name='address', value=ops.value[0], placeholder='Address').form-control.input-xs
- 									.filter-input.filter-input-sm: input(type='text', name='suburb', value=ops.value[1], placeholder='Suburb').form-control.input-xs
- 									.filter-input.filter-input-sm: input(type='text', name='state', value=ops.value[2], placeholder='State').form-control.input-xs
- 									.filter-input.filter-input-sm: input(type='text', name='postcode', value=ops.value[3], placeholder='Postcode').form-control.input-xs
- 									.filter-input.filter-input-sm: input(type='text', name='country', value=ops.value[4], placeholder='Country').form-control.input-xs
+									.filter-input.filter-input-md: input(type='text', name='address', value=ops.value[0], placeholder='Address').form-control.input-xs
+									.filter-input.filter-input-sm: input(type='text', name='suburb', value=ops.value[1], placeholder='Suburb').form-control.input-xs
+									.filter-input.filter-input-sm: input(type='text', name='state', value=ops.value[2], placeholder='State').form-control.input-xs
+									.filter-input.filter-input-sm: input(type='text', name='postcode', value=ops.value[3], placeholder='Postcode').form-control.input-xs
+									.filter-input.filter-input-sm: input(type='text', name='country', value=ops.value[4], placeholder='Country').form-control.input-xs
 
 								//- Select
 								if field.type == 'select'
@@ -406,4 +412,3 @@ block content
 				ul.pagination: each p, i in items.pages
 					li(class=items.currentPage == p ? 'active' : null)
 						a(href=(p == '...' ? link_to({page: (i ? items.totalPages : 1)}) : link_to({page: p})))= p
-
